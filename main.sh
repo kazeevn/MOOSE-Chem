@@ -106,10 +106,10 @@ python -u ./Method/evaluate.py --model_name ${model_name_eval} \
 
 
 ## Analysis: Ranking Groundtruth Hypothesis Between Generated Hypothesis
-# python -u ./Analysis/groundtruth_hyp_ranking.py --model_name ${model_name} \
+# python -u ./Analysis/groundtruth_hyp_ranking.py --model_name ${model_name_eval} \
 #         --api_type ${api_type} --api_key ${api_key} --base_url ${base_url} \
-#         --evaluate_result_dir ${checkpoint_root_dir}/evaluation_${model_name}_corpus_150_survey_1_gdthInsp_1_intraEA_1_interEA_1_bkgid_ \
-#         --if_save 1 --output_dir ${checkpoint_root_dir}/groundtruth_hypothesis_automatic_scores_four_aspects_${model_name}.json
+#         --evaluate_result_dir ${checkpoint_root_dir}/evaluation_${model_name_eval}_corpus_150_survey_1_gdthInsp_1_intraEA_1_interEA_1_bkgid_ \
+#         --if_save 1 --output_dir ${checkpoint_root_dir}/groundtruth_hypothesis_automatic_scores_four_aspects_${model_name_eval}.json
 
 
 
