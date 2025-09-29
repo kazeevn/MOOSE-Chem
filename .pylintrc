@@ -1,0 +1,3 @@
+[MESSAGES CONTROL]
+disable = C0116,  # missing-function-docstring
+          C0114   # missing-module-docstring
