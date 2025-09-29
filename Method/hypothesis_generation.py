@@ -21,8 +21,8 @@ class HypothesisGenerationEA(object):
         # azure client
         elif args.api_type == 1:
             self.client = AzureOpenAI(
-                azure_endpoint = args.base_url, 
-                api_key=args.api_key,  
+                azure_endpoint = args.base_url,
+                api_key=args.api_key,
                 api_version="2024-06-01"
             )
         # google client
@@ -31,15 +31,15 @@ class HypothesisGenerationEA(object):
         else:
             raise NotImplementedError
         ## Load research background: Use the research question and background survey in Tomato-Chem or the custom ones from input
-        if custom_rq == None and custom_bs == None:
+        if custom_rq is None and custom_bs is None:
             # annotated bkg research question and its annotated groundtruth inspiration paper titles
             self.bkg_q_list, self.dict_bkg2insp, self.dict_bkg2survey, self.dict_bkg2groundtruthHyp, self.dict_bkg2note, self.dict_bkg2idx, self.dict_idx2bkg, self.dict_bkg2reasoningprocess = load_chem_annotation(args.chem_annotation_path, self.args.if_use_strict_survey_question, self.args.if_use_background_survey)   
         else:
             print("INFO: Using custom_rq and custom_bs.")
-            assert custom_rq != None
+            assert custom_rq is not None
             self.bkg_q_list = [custom_rq]
             self.dict_bkg2survey = {custom_rq: custom_bs}
-            self.dict_idx2bkg = {0: custom_rq}   
+            self.dict_idx2bkg = {0: custom_rq}
         ## Load inspiration corpus (by default is the groundtruth inspiration papers and random high-quality papers)
         # title_abstract_collector: [[title, abstract], ...]
         # dict_title_2_abstract: {'title': 'abstract', ...}
@@ -54,7 +54,7 @@ class HypothesisGenerationEA(object):
             self.organized_insp, self.dict_bkg_insp2idx, self.dict_bkg_idx2insp = load_groundtruth_inspirations_as_screened_inspirations(bkg_q=bkg_q, dict_bkg2insp=self.dict_bkg2insp)
             # change the max_inspiration_search_steps to the number of inspirations in the background question to avoid exception that the number of inspirations is less than the max_inspiration_search_steps
             self.args.max_inspiration_search_steps = len(self.organized_insp[bkg_q])
-            print("set self.args.max_inspiration_search_steps to {}".format(len(self.organized_insp[bkg_q])))
+            print(f"set self.args.max_inspiration_search_steps to {len(self.organized_insp[bkg_q])}")
             print("Warning: using groundtruth inspirations for hypothesis generation..")
             print("bkg_q: ", bkg_q)
 
@@ -77,7 +77,7 @@ class HypothesisGenerationEA(object):
         # not a sufficient, but a necessary condition to make sure the ids in inspiration_ids correspond to the ids in screened_insp_cur_bq
         assert max(inspiration_ids) < len(screened_insp_cur_bq), "inspiration_ids should be less than the number of inspirations in the background question: max(inspiration_ids): {}; len(screened_insp_cur_bq): {}".format(max(inspiration_ids), len(screened_insp_cur_bq))
         # initialize final_data_collection if it is None
-        if final_data_collection == None:
+        if final_data_collection is None:
             final_data_collection = {}            
         if backgroud_question not in final_data_collection:
             final_data_collection[backgroud_question] = {}
@@ -517,7 +517,7 @@ class HypothesisGenerationEA(object):
     def hyothesis_generation_with_refinement(self, backgroud_question, backgroud_survey, cur_insp_core_node, other_mutations=None, recombination_type=0, this_mutation=None, if_self_eval_for_final_hyp=True):
         assert recombination_type in [0, 1, 2]
         # this_mutation is used iff recombination_type=2
-        assert this_mutation == None if recombination_type != 2 else this_mutation != None
+        assert this_mutation is None if recombination_type != 2 else this_mutation is not None
         print("New mutation line is developing..")
         # hypothesis_collection: [[hyp0, reasoning process0, feedback0], [hyp1, reasoning process1, feedback1], ...]
         hypothesis_collection = []
@@ -628,7 +628,7 @@ class HypothesisGenerationEA(object):
         cur_insp_core_node_prompt = "title: {}; abstract: {}.".format(cur_insp_core_node[0], cur_insp_core_node[2])
 
         ## self-explore of extra knowledge as additional complement key point
-        if other_mutations == None:
+        if other_mutations is None:
             prompts = instruction_prompts("self_extra_knowledge_exploration")
             assert len(prompts) == 5
             full_prompt = prompts[0] + backgroud_question + prompts[1] + backgroud_survey + prompts[2] + cur_insp_core_node_prompt + prompts[3] + input_hyp + prompts[4]
@@ -698,10 +698,10 @@ class HypothesisGenerationEA(object):
             assert recombination_type == 0
             # -1: no recombinational mutation at all, even no combination between background and inspiration, since we don't retrieve inspirations for this baseline (baseline_type 2)
             recombination_type = -1
-        if hyp_feedback != None:
-            assert same_mutation_prev_hyp != None
+        if hyp_feedback is not None:
+            assert same_mutation_prev_hyp is not None
         # this_mutation is used iff recombination_type=2
-        assert this_mutation == None if recombination_type != 2 else this_mutation != None
+        assert this_mutation is None if recombination_type != 2 else this_mutation is not None
             
         # core insp prompt
         cur_insp_core_node_prompt = "title: {}; abstract: {}; one of the potential reasons on why this inspiration could be helpful: {}.".format(cur_insp_core_node[0], cur_insp_core_node[2], cur_insp_core_node[1])
@@ -709,18 +709,18 @@ class HypothesisGenerationEA(object):
         
         ## instructions
         if recombination_type == 2:
-            assert other_mutations != None
+            assert other_mutations is not None
             # other_mutations: [insp_title, insp_abstract, hyp]
             assert len(other_mutations) == 3
             # other_mutations_prompt
             other_mutations_prompt = "The selected complementary inspiration has title: {}, and abstract: {}. This complementary inspiration can lead to the hypothesis: {}. This hypothesis could be useful to understand how this complementary inspiration can be helpful.".format(other_mutations[0], other_mutations[1], other_mutations[2])
-            if same_mutation_prev_hyp == None and hyp_feedback == None:
+            if same_mutation_prev_hyp is None and hyp_feedback is None:
                 prompts = instruction_prompts("final_recombinational_mutation_hyp_gene_between_diff_inspiration")
                 assert len(prompts) == 6
                 full_prompt = prompts[0] + backgroud_question + prompts[1] + backgroud_survey + prompts[2] + cur_insp_core_node_prompt + prompts[3] + this_mutation + prompts[4] + other_mutations_prompt + prompts[5]
                 template = ['Reasoning Process:', 'Hypothesis:']
             # during refinement of recombination of different insp islands, we need to keep seeing the different hyps from different insp islands
-            elif same_mutation_prev_hyp != None and hyp_feedback != None:
+            elif same_mutation_prev_hyp is not None and hyp_feedback is not None:
                 prompts = instruction_prompts("final_recombinational_mutation_hyp_gene_between_diff_inspiration_with_feedback")
                 assert len(prompts) == 8
                 full_prompt = prompts[0] + backgroud_question + prompts[1] + backgroud_survey + prompts[2] + cur_insp_core_node_prompt + prompts[3] + this_mutation + prompts[4] + other_mutations_prompt + prompts[5] + same_mutation_prev_hyp + prompts[6] + hyp_feedback + prompts[7]
@@ -728,19 +728,19 @@ class HypothesisGenerationEA(object):
             else:
                 raise ValueError("should not have this case. same_mutation_prev_hyp: {}; hyp_feedback: {}".format(same_mutation_prev_hyp, hyp_feedback))
         elif recombination_type == 1:
-            assert other_mutations != None
+            assert other_mutations is not None
             # other_mutations_prompt
             other_mutations_prompt = ""
             for cur_other_mutation_id, cur_other_mutation in enumerate(other_mutations):
                 cur_other_mutation_prompt = "Next is previous hypothesis {}: {}.\n".format(cur_other_mutation_id, cur_other_mutation)
                 other_mutations_prompt += cur_other_mutation_prompt
             # instructions
-            if same_mutation_prev_hyp == None and hyp_feedback == None:
+            if same_mutation_prev_hyp is None and hyp_feedback is None:
                 prompts = instruction_prompts("final_recombinational_mutation_hyp_gene_same_bkg_insp")
                 assert len(prompts) == 5
                 full_prompt = prompts[0] + backgroud_question + prompts[1] + backgroud_survey + prompts[2] + cur_insp_core_node_prompt + prompts[3] + other_mutations_prompt + prompts[4]
                 template = ['Reasoning Process:', 'Hypothesis:']
-            elif same_mutation_prev_hyp != None and hyp_feedback != None:
+            elif same_mutation_prev_hyp is not None and hyp_feedback is not None:
                 prompts = instruction_prompts("final_recombinational_mutation_hyp_gene_same_bkg_insp_with_feedback")
                 assert len(prompts) == 7
                 full_prompt = prompts[0] + backgroud_question + prompts[1] + backgroud_survey + prompts[2] + cur_insp_core_node_prompt + prompts[3] + other_mutations_prompt + prompts[4] + same_mutation_prev_hyp + prompts[5] + hyp_feedback + prompts[6]
@@ -749,41 +749,41 @@ class HypothesisGenerationEA(object):
                 raise ValueError("should not have this case. same_mutation_prev_hyp: {}; hyp_feedback: {}".format(same_mutation_prev_hyp, hyp_feedback))
         elif recombination_type == 0:
             # other_mutations_prompt
-            if other_mutations != None:
+            if other_mutations is not None:
                 other_mutations_prompt = ""
                 for cur_other_mutation_id, cur_other_mutation in enumerate(other_mutations):
                     cur_other_mutation_prompt = "Next is previous hypothesis {}: {}.\n".format(cur_other_mutation_id, cur_other_mutation)
                     other_mutations_prompt += cur_other_mutation_prompt
             # instructions
-            if other_mutations == None and hyp_feedback == None:
+            if other_mutations is None and hyp_feedback is None:
                 prompts = instruction_prompts("coarse_hypothesis_generation_only_core_inspiration")
                 assert len(prompts) == 4
                 full_prompt = prompts[0] + backgroud_question + prompts[1] + backgroud_survey + prompts[2] + cur_insp_core_node_prompt + prompts[3]
                 template=['Reasoning Process:', 'Hypothesis:']
-            elif other_mutations == None and hyp_feedback != None:
+            elif other_mutations is None and hyp_feedback is not None:
                 prompts = instruction_prompts("hypothesis_generation_with_feedback_only_core_inspiration")
                 assert len(prompts) == 6
                 full_prompt = prompts[0] + backgroud_question + prompts[1] + backgroud_survey + prompts[2] + cur_insp_core_node_prompt + prompts[3] + same_mutation_prev_hyp + prompts[4] + hyp_feedback + prompts[5]
                 template=['Reasoning Process:', 'Refined Hypothesis:']
             # to develop the second or more mutation line that should be different with the hypotheses from previous mutation lines
-            elif other_mutations != None and hyp_feedback == None:
+            elif other_mutations is not None and hyp_feedback is None:
                 prompts = instruction_prompts("hypothesis_generation_mutation_different_with_prev_mutations_only_core_inspiration")
                 assert len(prompts) == 5
                 # full_prompt
                 full_prompt = prompts[0] + backgroud_question + prompts[1] + backgroud_survey + prompts[2] + cur_insp_core_node_prompt + prompts[3] + other_mutations_prompt + prompts[4]
                 template = ['Reasoning Process:', 'Hypothesis:']
-            elif other_mutations != None and hyp_feedback != None:
+            elif other_mutations is not None and hyp_feedback is not None:
                 raise ValueError("should not have both other_mutations and hyp_feedback")
             else:
                 raise ValueError("should not have this case")   
         elif recombination_type == -1:
-            assert other_mutations == None
-            if hyp_feedback == None:
+            assert other_mutations is None
+            if hyp_feedback is None:
                 prompts = instruction_prompts("coarse_hypothesis_generation_without_inspiration")
                 assert len(prompts) == 3
                 full_prompt = prompts[0] + backgroud_question + prompts[1] + backgroud_survey + prompts[2] 
                 template = ['Reasoning Process:', 'Hypothesis:']
-            elif hyp_feedback != None:
+            elif hyp_feedback is not None:
                 prompts = instruction_prompts("hypothesis_generation_with_feedback_without_inspiration")
                 assert len(prompts) == 5
                 full_prompt = prompts[0] + backgroud_question + prompts[1] + backgroud_survey + prompts[2] + same_mutation_prev_hyp + prompts[3] + hyp_feedback + prompts[4]
@@ -884,11 +884,7 @@ class HypothesisGenerationEA(object):
         print("Saved data to {}".format(file_path))
 
 
-
-
-
-
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description='Hypothesis generation')
     parser.add_argument("--model_name", type=str, default="chatgpt", help="model name: gpt4/chatgpt/chatgpt16k/claude35S/gemini15P/llama318b/llama3170b/llama31405b")
     parser.add_argument("--api_type", type=int, default=1, help="0: openai's API toolkit; 1: azure's API toolkit")
@@ -980,7 +976,8 @@ if __name__ == "__main__":
         custom_rq, custom_bs = None, None
         print("Using the research background in the Tomato-Chem benchmark.")
     else:
-        assert os.path.exists(args.custom_research_background_path), "The research background file does not exist: {}".format(args.custom_research_background_path)
+        assert os.path.exists(args.custom_research_background_path), \
+            "The research background file does not exist: {}".format(args.custom_research_background_path)
         with open(args.custom_research_background_path, 'r') as f:
             research_background = json.load(f)
         # research_background: [research question, background survey]
@@ -1019,5 +1016,8 @@ if __name__ == "__main__":
         final_data_collection = hyp_gene_ea.hypothesis_generation_for_one_background_question(background_question_id=args.background_question_id, inspiration_ids=args.inspiration_ids, final_data_collection=final_data_collection)
 
     duration = time.time() - start_time
-    
+
     print("Finished within {} seconds!".format(duration))
+
+if __name__ == "__main__":
+    main()

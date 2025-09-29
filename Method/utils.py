@@ -260,7 +260,6 @@ def recover_raw_background(background_strict_raw, background_normal, background_
             cur_value = cur_survey
             background_strict.append(cur_value)
     return background_strict
-    
 
 
 # load xlsx annotations, bkg question -> inspirations

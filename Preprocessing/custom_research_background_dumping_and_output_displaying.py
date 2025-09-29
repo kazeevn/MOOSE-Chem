@@ -1,10 +1,12 @@
-import os, json, argparse
+import os
+import json
+import argparse
 
 
 def research_background_to_json(research_background_file_path):
     # YOUR RESEARCH QUESTION HERE
     research_question = '''
-    YOUR RESEARCH QUESTION HERE
+    How can we design a generative model for materials that will produce stable, unique, novel, and realistic crystalline materials?
     '''
 
     # YOUR BACKGROUND SURVEY HERE
@@ -14,21 +16,19 @@ def research_background_to_json(research_background_file_path):
 
 
     # Save the research question and background survey to a JSON file
-    with open(research_background_file_path, "w") as f:
+    with open(research_background_file_path, "w", encoding="utf-8") as f:
         json.dump([research_question.strip(), background_survey.strip()], f, indent=4)
     print("Research background saved to", research_background_file_path)
 
 
-
-
 def write_hypothesis_to_txt(eval_file_path, output_dir):
     # Load the JSON file
-    with open(eval_file_path, "r") as f:
+    with open(eval_file_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
     research_question = list(data[0].keys())[0]
 
-    with open(output_dir, "w") as f:
+    with open(output_dir, "w", encoding="utf-8") as f:
         for cur_id in range(len(data[0][research_question])):
             cur_hypothesis = data[0][research_question][cur_id][0]
             cur_score = data[0][research_question][cur_id][1]
