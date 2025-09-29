@@ -162,7 +162,10 @@ class Evaluate(object):
         prompts = instruction_prompts('eval_matched_score')
         full_prompt = prompts[0] + gene_hyp + prompts[1] + gold_hyp + prompts[2] + keypoints + prompts[3]
         # structured_gene: [matched_score, reason]
-        structured_gene = llm_generation_while_loop(full_prompt, self.args.model_name, self.client, if_structured_generation=True, template=['Reason:', 'Matched score:'], temperature=0.0, restructure_output_model_name=self.args.model_name, api_type=self.args.api_type)
+        structured_gene = llm_generation_while_loop(
+            full_prompt, self.args.model_name, self.client,
+            if_structured_generation=True, template=['Reason:', 'Matched score:'],
+            temperature=0.0, restructure_output_model_name=self.args.model_name, api_type=self.args.api_type)
         structured_gene = exchange_order_in_list(structured_gene)
         return structured_gene
         

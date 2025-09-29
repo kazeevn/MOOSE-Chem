@@ -478,12 +478,12 @@ def load_coarse_grained_hypotheses(coarse_grained_hypotheses_path):
     
 
 # Call Openai API,k input is prompt, output is response
-def llm_generation(prompt, model_name, client, temperature=1.0, api_type=0):
+def llm_generation(prompt, model_name, client, temperature=1., api_type=0):
     # print("prompt: ", prompt)
     if "claude-3-haiku" in model_name:
-        max_tokens = 4096
+        max_completion_tokens = 4096
     else:
-        max_tokens = 8192
+        max_completion_tokens = 8192
     cnt_max_trials = 1
     # start inference util we get generation
     for cur_trial in range(cnt_max_trials):
@@ -492,7 +492,7 @@ def llm_generation(prompt, model_name, client, temperature=1.0, api_type=0):
                 completion = client.chat.completions.create(
                 model=model_name,
                 temperature=temperature,
-                max_tokens=max_tokens,
+                max_completion_tokens=max_completion_tokens,
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant."},
                     {"role": "user", "content": prompt}
@@ -502,7 +502,7 @@ def llm_generation(prompt, model_name, client, temperature=1.0, api_type=0):
             # google client
             elif api_type == 2:
                 response = client.models.generate_content(
-                    model=model_name, 
+                    model=model_name,
                     contents=prompt,
                     config=types.GenerateContentConfig(
                         thinking_config=types.ThinkingConfig(thinking_budget=0)

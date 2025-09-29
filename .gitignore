@@ -6,3 +6,4 @@ Inference_Corpus/*
 logs/*
 Logs/*
 *.zip
+.env

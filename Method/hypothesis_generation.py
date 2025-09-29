@@ -294,7 +294,9 @@ class HypothesisGenerationEA(object):
         # generation
         # structured_extra_knowledge: [[Title0, Reason0], [Title1, Reason1], ...]
         # we might want the temperature for inspiration retrieval to be zero, for better reflecting heuristics & stable performance
-        structured_extra_knowledge = llm_generation_while_loop(full_prompt, self.args.model_name, self.client, if_structured_generation=True, template=['Title:', 'Reason:'], temperature=0.0, restructure_output_model_name=self.args.model_name, api_type=self.args.api_type)
+        structured_extra_knowledge = llm_generation_while_loop(full_prompt, self.args.model_name,
+            self.client, if_structured_generation=True, template=['Title:', 'Reason:'], temperature=0.0,
+            restructure_output_model_name=self.args.model_name, api_type=self.args.api_type)
         # structured_extra_knowledge = exchange_order_in_list(structured_extra_knowledge)
         structured_extra_knowledge = [[recover_generated_title_to_exact_version_of_title(list(self.dict_title_2_abstract.keys()), item[0]), item[1]] for item in structured_extra_knowledge]
         # selected_titles: [Title0, Title1, ...]
@@ -789,7 +791,7 @@ class HypothesisGenerationEA(object):
             else:
                 raise ValueError("should not have this case")
         else:
-            raise ValueError("recombination_type: {} is not supported".format(recombination_type))
+            raise ValueError(f"recombination_type: {recombination_type} is not supported")
              
         ## generation
         while True:
@@ -800,7 +802,7 @@ class HypothesisGenerationEA(object):
                 break
             except AssertionError as e:
                 # if the format
-                print("AssertionError: {}, try again..".format(e))
+                print(f"AssertionError: {e}, try again..")
         
         # cur_structured_gene: [[hyp, reasoning process]] --> [hyp, reasoning process]
         assert len(cur_structured_gene) == 1 and len(cur_structured_gene[0]) == 2
