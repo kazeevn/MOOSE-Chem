@@ -10,9 +10,7 @@ def research_background_to_json(research_background_file_path):
     '''
 
     # YOUR BACKGROUND SURVEY HERE
-    background_survey = '''
-    YOUR BACKGROUND SURVEY HERE
-    '''
+    background_survey = ''
 
 
     # Save the research question and background survey to a JSON file
@@ -41,10 +39,7 @@ def write_hypothesis_to_txt(eval_file_path, output_dir):
     # print("len(data):", len(data))
 
 
-
-
-
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--io_type", type=int, default=1, help="0: dumping input to json for MOOSE-Chem to load; 1: displaying output to txt for human reading")
     parser.add_argument("--custom_research_background_path", type=str, default="./custom_research_background.json", help="the path to the research background file. The format is [research question, background survey], and saved in a json file. ")
@@ -61,4 +56,7 @@ if __name__ == "__main__":
         write_hypothesis_to_txt(args.evaluate_output_dir, args.display_dir)
     else:
         raise ValueError("args.io_type should be either 0 or 1")
-    
+
+
+if __name__ == "__main__":
+    main()
