@@ -7,3 +7,4 @@ logs/*
 Logs/*
 *.zip
 .env
+hypothesis.txt

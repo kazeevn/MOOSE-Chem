@@ -15,8 +15,8 @@ class GroundTruth_Hyp_Ranking(object):
         # azure client
         elif args.api_type == 1:
             self.client = AzureOpenAI(
-                azure_endpoint = args.base_url, 
-                api_key=args.api_key,  
+                azure_endpoint = args.base_url,
+                api_key=args.api_key,
                 api_version="2024-06-01"
             )
         else:
@@ -34,7 +34,7 @@ class GroundTruth_Hyp_Ranking(object):
         prompts = instruction_prompts("four_aspects_self_numerical_evaluation")
         assert len(prompts) == 2
         # cur_hypothesis_prompt: for evaluation, we only need the hypothesis itself, but not reasoning process
-        cur_hypothesis_prompt = "hypothesis: {}.".format(cur_hyp)
+        cur_hypothesis_prompt = f"hypothesis: {cur_hyp}."
         full_prompt = prompts[0] + cur_hypothesis_prompt + prompts[1]
         # generation
         while True:
@@ -45,9 +45,9 @@ class GroundTruth_Hyp_Ranking(object):
                 break
             except AssertionError as e:
                 # if the format
-                print("AssertionError: {}, try again..".format(e))
+                print(f"AssertionError: {e}, try again..")
             except Exception as e:
-                print("Exception: {}, try again..".format(e))
+                print(f"Exception: {e}, try again..")
         return score_collection, score_reason_collection
 
 
@@ -67,7 +67,7 @@ class GroundTruth_Hyp_Ranking(object):
         # cur_ranked_hypothesis: [[hyp, ave_score, scores, core_insp_title, round_id, [first_round_mutation_id, second_round_mutation_id]], ...] (sorted by average score, in descending order)
         cur_ranked_hypothesis = ranked_hypothesis_collection[cur_bkg]
         ave_score_groundtruth_hyp = np.mean(cur_score_collection)
-        # print("cur_id_bkg: {}; ave_score_groundtruth_hyp: {}".format(cur_id_bkg, ave_score_groundtruth_hyp))
+        # print(f"cur_id_bkg: {cur_id_bkg}; ave_score_groundtruth_hyp: {ave_score_groundtruth_hyp}")
         # generated_hyp_ave_score_ranked_list should be sorted
         generated_hyp_ave_score_ranked_list = [cur_ranked_hypothesis[id][1] for id in range(len(cur_ranked_hypothesis))]
         # generated_hyp_validness_score_ranked_list
@@ -138,7 +138,7 @@ class GroundTruth_Hyp_Ranking(object):
         for cur_ratio_idx in range(len(final_ratio_overall_and_four_aspects)):
             cur_ave_ratio = np.mean(final_ratio_overall_and_four_aspects[cur_ratio_idx])
             final_ratio_overall_and_four_aspects[cur_ratio_idx].append(cur_ave_ratio)
-        print("cur_id_bkg: {}; cur_ave_ratio_overall: {:.2f}; cur_ave_ratio_validness: {:.2f}; cur_ave_ratio_novelty: {:.2f}; cur_ave_ratio_significance: {:.2f}; cur_ave_ratio_potential: {:.2f}".format(cur_id_bkg, final_ratio_overall_and_four_aspects[0][2], final_ratio_overall_and_four_aspects[1][2], final_ratio_overall_and_four_aspects[2][2], final_ratio_overall_and_four_aspects[3][2], final_ratio_overall_and_four_aspects[4][2]))
+        print(f"cur_id_bkg: {cur_id_bkg}; cur_ave_ratio_overall: {final_ratio_overall_and_four_aspects[0][2]:.2f}; cur_ave_ratio_validness: {final_ratio_overall_and_four_aspects[1][2]:.2f}; cur_ave_ratio_novelty: {final_ratio_overall_and_four_aspects[2][2]:.2f}; cur_ave_ratio_significance: {final_ratio_overall_and_four_aspects[3][2]:.2f}; cur_ave_ratio_potential: {final_ratio_overall_and_four_aspects[4][2]:.2f}")
         return final_ratio_overall_and_four_aspects
 
 
@@ -194,7 +194,7 @@ if __name__ == "__main__":
     else:
         # groundtruthHyp_fourScores_collection: [[cur_id_bkg, cur_score_collection, cur_score_reason_collection, final_ratio_overall_and_four_aspects], ...]
         #   final_ratio_overall_and_four_aspects: [[first_ratio, last_ratio, ave_ratio], ...] (average score, validness score, novelty score, significance score, potential score)
-        print("{} already exists.".format(args.output_dir))
+        print(f"{args.output_dir} already exists.")
         with open(args.output_dir, 'r') as f:
             groundtruthHyp_fourScores_collection = json.load(f)
         ave_index_ratio_list = [groundtruthHyp_fourScores_collection[id][3][0][2] for id in range(len(groundtruthHyp_fourScores_collection))]
@@ -209,5 +209,8 @@ if __name__ == "__main__":
         ave_ave_index_ratio_significance = np.mean(ave_index_ratio_significance_list)
         ave_ave_index_ratio_potential = np.mean(ave_index_ratio_potential_list)
 
-    print("ave_ave_index_ratio_overall: {:.2f}; ave_ave_index_ratio_validness: {:.2f}; ave_ave_index_ratio_novelty: {:.2f}; ave_ave_index_ratio_significance: {:.2f}; ave_ave_index_ratio_potential: {:.2f}".format(ave_ave_index_ratio, ave_ave_index_ratio_validness, ave_ave_index_ratio_novelty, ave_ave_index_ratio_significance, ave_ave_index_ratio_potential))
-
+    print(f"ave_ave_index_ratio_overall: {ave_ave_index_ratio:.2f}; "
+          f"ave_ave_index_ratio_validness: {ave_ave_index_ratio_validness:.2f}; "
+          f"ave_ave_index_ratio_novelty: {ave_ave_index_ratio_novelty:.2f}; "
+          f"ave_ave_index_ratio_significance: {ave_ave_index_ratio_significance:.2f}; "
+          f"ave_ave_index_ratio_potential: {ave_ave_index_ratio_potential:.2f}")
