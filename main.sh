@@ -61,12 +61,13 @@ mkdir -p hypothesis
 output_dir_postfix="output_dir_postfix"
 
 # custom_research_background_path: set to "" if you want to use the default research background in TOMATO-Bench
-custom_research_background_path=""
-# custom_raw_inspiration_data_dir: raw custom inspiration data to process to inspiration corpus
-custom_raw_inspiration_data_dir=""
+research_background_root="research_background"
+mkdir -p ${research_background_root}
+custom_research_background_path="${research_background_root}/${experiment_name}.json"
 # custom_inspiration_corpus_path: set to "" if you want to use the default inspiration corpus in TOMATO-Bench
-custom_inspiration_corpus_path=""
-
+custom_inspiration_corpus_path="inspiration_corpus/${experiment_name}.json"
+mkdir -p inspiration_corpus
+semantic_scholar_paper_id="CorpusId:276775381"
 
 # Function definitions for each step
 run_background() {
@@ -80,8 +81,8 @@ run_background() {
 run_corpus() {
     echo "=== Step 2: Custom Inspiration Corpus Construction ==="
     python -u ./Preprocessing/construct_custom_inspiration_corpus.py \
-            --raw_data_dir ${custom_raw_inspiration_data_dir} \
-            --custom_inspiration_corpus_path ${custom_inspiration_corpus_path}
+            --custom_inspiration_corpus_path ${custom_inspiration_corpus_path} \
+            --method semanticscholar --paper_id ${semantic_scholar_paper_id}
 }
 
 run_retrieval() {

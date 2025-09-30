@@ -8,3 +8,5 @@ Logs/*
 *.zip
 .env
 hypothesis.txt
+inspiration_corpus/
+research_background/
