@@ -1,6 +1,13 @@
-import os, re, json, random, time, math
+import os
+import re
+import json
+import random
+import time
+import math
+from typing import Optional
 import pandas as pd
 from google.genai import types
+from pydantic import BaseModel
 
 
 DISCIPLINE = "chemistry"
@@ -610,6 +617,95 @@ def get_structured_generation_from_raw_generation_by_llm(gene, template, client,
             print(f"update temperature to {temperature} and use {model_name} for extraction in case new generation can be successful..")
     # print("structured_gene: ", structured_gene)
     raise Exception("Failed to restructure the passage with the template after {} trials.".format(max_trials))
+
+
+# Define Pydantic models for structured outputs
+class HypothesisResponse(BaseModel):
+    reasoning_process: str
+    hypothesis: str
+
+class RefinedHypothesisResponse(BaseModel):
+    reasoning_process: str
+    refined_hypothesis: str
+
+def llm_generation_structured(prompt, model_name, client, template, temperature=1., api_type=0):
+    """
+    Generate structured output using OpenAI's structured outputs feature.
+    
+    Args:
+        prompt: The input prompt
+        model_name: The model to use
+        client: The OpenAI client
+        template: List of field names like ['Reasoning Process:', 'Hypothesis:']
+        temperature: Temperature for generation
+        api_type: API type (0=OpenAI, 1=Azure, 2=Google)
+    
+    Returns:
+        List containing the structured response in the same format as get_structured_generation_from_raw_generation
+    """
+    if "claude-3-haiku" in model_name:
+        max_completion_tokens = 4096
+    else:
+        max_completion_tokens = 8192
+    
+    cnt_max_trials = 3
+    
+    # For non-OpenAI APIs, fall back to the original method
+    if api_type == 2:  # Google
+        generation = llm_generation(prompt, model_name, client, temperature=temperature, api_type=api_type)
+        return get_structured_generation_from_raw_generation(generation, template=template)
+    
+    # Determine which response model to use based on template
+    if len(template) == 2:
+        if 'refined' in template[1].lower():
+            response_model = RefinedHypothesisResponse
+        else:
+            response_model = HypothesisResponse
+    else:
+        # Fall back to original method for unsupported templates
+        generation = llm_generation(prompt, model_name, client, temperature=temperature, api_type=api_type)
+        return get_structured_generation_from_raw_generation(generation, template=template)
+    
+    # Try structured generation with OpenAI
+    for cur_trial in range(cnt_max_trials):
+        try:
+            if api_type in [0, 1]:  # OpenAI or Azure
+                # Use the beta structured outputs API
+                completion = client.beta.chat.completions.parse(
+                    model=model_name,
+                    temperature=temperature,
+                    max_completion_tokens=max_completion_tokens,
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant. Provide your response in the exact format requested."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    response_format=response_model
+                )
+                
+                # Parse the structured response
+                response_data = completion.choices[0].message.parsed
+                
+                # Convert to the expected format
+                if isinstance(response_data, HypothesisResponse):
+                    return [[response_data.hypothesis, response_data.reasoning_process]]
+                elif isinstance(response_data, RefinedHypothesisResponse):
+                    return [[response_data.refined_hypothesis, response_data.reasoning_process]]
+                    
+            else:
+                raise NotImplementedError(f"Structured outputs not implemented for api_type {api_type}")
+                
+        except Exception as e:
+            print(f"Structured generation attempt {cur_trial + 1} failed: {e}")
+            if cur_trial == cnt_max_trials - 1:
+                # Fall back to original method
+                print("Falling back to original method...")
+                generation = llm_generation(prompt, model_name, client, temperature=temperature, api_type=api_type)
+                return get_structured_generation_from_raw_generation(generation, template=template)
+            time.sleep(0.25)
+    
+    # This should never be reached, but just in case
+    generation = llm_generation(prompt, model_name, client, temperature=temperature, api_type=api_type)
+    return get_structured_generation_from_raw_generation(generation, template=template)
 
 
 

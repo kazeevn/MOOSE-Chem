@@ -4,7 +4,7 @@ import os, sys, argparse, json, time, copy, math, builtins
 from openai import OpenAI, AzureOpenAI
 import numpy as np
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from Method.utils import load_chem_annotation, load_dict_title_2_abstract, load_found_inspirations, get_item_from_dict_with_very_similar_but_not_exact_key, instruction_prompts, llm_generation, get_structured_generation_from_raw_generation, pick_score, llm_generation_while_loop, recover_generated_title_to_exact_version_of_title, load_groundtruth_inspirations_as_screened_inspirations, exchange_order_in_list
+from Method.utils import load_chem_annotation, load_dict_title_2_abstract, load_found_inspirations, get_item_from_dict_with_very_similar_but_not_exact_key, instruction_prompts, llm_generation, get_structured_generation_from_raw_generation, llm_generation_structured, pick_score, llm_generation_while_loop, recover_generated_title_to_exact_version_of_title, load_groundtruth_inspirations_as_screened_inspirations, exchange_order_in_list
 from Method.logging_utils import setup_logger
 from google import genai
 
@@ -518,7 +518,7 @@ class HypothesisGenerationEA(object):
         assert recombination_type in [0, 1, 2]
         # this_mutation is used iff recombination_type=2
         assert this_mutation is None if recombination_type != 2 else this_mutation is not None
-        print("New mutation line is developing..")
+        print("New mutation line is developing...")
         # hypothesis_collection: [[hyp0, reasoning process0, feedback0], [hyp1, reasoning process1, feedback1], ...]
         hypothesis_collection = []
         for cur_refine_iter in range(self.args.num_itr_self_refine):
@@ -535,7 +535,7 @@ class HypothesisGenerationEA(object):
                     other_mutations = None
                 else:
                     raise NotImplementedError
-            # set parameters: if_with_external_knowledge_feedback 
+            # set parameters: if_with_external_knowledge_feedback
             #   (only during the first iteration, the refinement will consider to add external knowledge to stick bkg and insp)
             #   it is to prevent too much additional information in the final hypothesis (previously we add external knowledge at every refinement step)
             if self.args.if_consider_external_knowledge_feedback_during_second_refinement and cur_refine_iter == 1:
@@ -560,7 +560,6 @@ class HypothesisGenerationEA(object):
                     cur_hypothesis_and_reasoning_process.append(hyp_numerical_self_eval)
             hypothesis_collection.append(cur_hypothesis_and_reasoning_process)
         return hypothesis_collection
-
 
 
     ## Function
@@ -611,9 +610,7 @@ class HypothesisGenerationEA(object):
         return self_explored_knowledge_hypothesis_collection
 
 
-
-
-    ## Function
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                            ## Function
     # Explore [extra knowledge (once) and hypothesis generation (once) and refinement (once)] (multiple times, controled by hyper-parameter)
     ## Input
     # backgroud_question: text  
@@ -791,15 +788,8 @@ class HypothesisGenerationEA(object):
             raise ValueError(f"recombination_type: {recombination_type} is not supported")
 
         ## generation
-        while True:
-            #try:
-            cur_gene = llm_generation(full_prompt, self.args.model_name, self.client, api_type=self.args.api_type)
-            cur_structured_gene = get_structured_generation_from_raw_generation(cur_gene, template=template)
-            cur_structured_gene = exchange_order_in_list(cur_structured_gene)
-            break
-            #except AssertionError as e:
-            #    # if the format
-                #print(f"AssertionError: {e}, try again..")
+        cur_structured_gene = llm_generation_structured(full_prompt, self.args.model_name, self.client, template=template, temperature=1.0, api_type=self.args.api_type)
+        cur_structured_gene = exchange_order_in_list(cur_structured_gene)
 
         # cur_structured_gene: [[hyp, reasoning process]] --> [hyp, reasoning process]
         assert len(cur_structured_gene) == 1 and len(cur_structured_gene[0]) == 2
