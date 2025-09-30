@@ -24,7 +24,7 @@ The input to MOOSE-Chem can be as simple as only:
 
 &emsp;(2) *background survey*: (optionally) a several-paragraph-long survey describing the existing methods for the *research question*;
 
-&emsp;(3) *inspiration corpus*: (this repo contains the default 3000 papers) title and abstract of many (random) chemistry papers that might serve as inspirations for the *research question*, preferably published on top venues.
+&emsp;(3) *inspiration corpus*: (this repo contains the default 3000 papers) title and abstract of many (random) chemistry papers that might serve as inspirations for the *research question*, preferably published on top venues. You can also build a custom corpus from Excel files or automatically from paper references using the Semantic Scholar API.
 
 **MOOSE-Chem** can then output a list of ranked chemistry hypotheses (might take a few hours to "think") that could be both novel and valid.
 
@@ -83,7 +83,7 @@ bash main.sh all
 
 # Optional steps:
 bash main.sh background     # Step 1: Custom Research Background
-bash main.sh corpus         # Step 2: Custom Inspiration Corpus
+bash main.sh corpus         # Step 2: Custom Inspiration Corpus (uses Semantic Scholar by default)
 bash main.sh analysis       # Step 7: Analysis
 
 # Show help:
@@ -135,7 +135,7 @@ bash main.sh background
 
 You can provide your own inspiration corpus (titles and abstracts) to set up the hypothesis search space. If not provided, the system will use the default ones in the benchmark dataset.
 
-### ✅ Two Ways to Provide a Custom Corpus:
+### ✅ Three Ways to Provide a Custom Corpus:
 
 #### **Option 1**: Manually Compose Your Own
 
@@ -149,7 +149,60 @@ Save this to the path specified by `custom_inspiration_corpus_path` in `main.sh`
 
 ---
 
-#### **Option 2**: Use Web of Science to Download in Bulk
+#### **Option 2**: Use Semantic Scholar API to Retrieve References
+
+🆕 **New Feature!** Automatically build an inspiration corpus from the references of a specific paper using the Semantic Scholar API.
+
+**Method A: Using main.sh (Recommended)**
+
+1. **Configure main.sh**
+   - Set `custom_inspiration_corpus_path` in `main.sh` to the desired output path for the inspiration corpus
+   - Set `semantic_scholar_paper_id` in `main.sh` to your desired paper ID (currently set to "CorpusId:276775381")
+   - Run the step:
+
+```bash
+bash main.sh corpus
+```
+
+**Method B: Direct Python Command**
+
+Use the Semantic Scholar method directly with a paper ID:
+
+```bash
+# Using ArXiv ID
+python Preprocessing/construct_custom_inspiration_corpus.py \
+  --method semanticscholar \
+  --paper_id "arXiv:1706.03762" \
+  --max_references 100 \
+  --custom_inspiration_corpus_path "./my_semantic_scholar_corpus.json"
+
+# Using DOI
+python Preprocessing/construct_custom_inspiration_corpus.py \
+  --method semanticscholar \
+  --paper_id "10.1038/nature14539" \
+  --max_references 50 \
+  --custom_inspiration_corpus_path "./my_semantic_scholar_corpus.json"
+```
+
+**Supported Paper ID formats:**
+- **DOI**: `10.1038/nature14539`
+- **ArXiv**: `arXiv:1706.03762` or `1706.03762`
+- **Semantic Scholar ID**: `649def34f8be52c8b66281af98ae884c09aef38b`
+- **Corpus ID**: `CorpusId:276775381`
+- **Pubmed ID**: `PMID:19872477`
+
+**Parameters:**
+- `--paper_id`: The ID of the paper whose references you want to retrieve
+- `--max_references`: (Optional) Maximum number of references to retrieve. If not specified, all available references will be used
+- `--custom_inspiration_corpus_path`: Output path for the generated corpus file
+
+> ✅ This method automatically extracts title-abstract pairs from the reference list of the specified paper, providing a focused and relevant inspiration corpus.
+
+> 💡 **Note**: This is now the default method used by `bash main.sh corpus`. You can change the paper ID by modifying the `semantic_scholar_paper_id` variable in `main.sh`.
+
+---
+
+#### **Option 3**: Use Web of Science to Download in Bulk
 
 1. **Prepare the Raw Data**
    * Use [Web of Science](https://www.webofscience.com/wos/woscc/summary/0d1f66e0-aebb-4b29-a6c8-d685e04c2ea9-015bae6080/relevance/1) to search for papers by journal name and optionally filter with keywords.
@@ -162,15 +215,43 @@ Save this to the path specified by `custom_inspiration_corpus_path` in `main.sh`
    Save all `.xlsx` or `.xls` files into a single folder for further processing.
 
 2. **Configure and Run**  
-   - Set `custom_raw_inspiration_data_dir` in `main.sh` to the folder path containing your `.xlsx` or `.xls` files  
-   - Set `custom_inspiration_corpus_path` in `main.sh` to the desired output path for the processed inspiration corpus  
+   - Add a `custom_raw_inspiration_data_dir` variable in `main.sh` pointing to your Excel files folder
+   - Set `custom_inspiration_corpus_path` in `main.sh` to the desired output path for the processed inspiration corpus
+   - Modify the `run_corpus()` function in `main.sh` to use the Excel method:
+   
+   ```bash
+   # Add this variable at the top of main.sh (around line 70):
+   custom_raw_inspiration_data_dir="/path/to/your/excel/files"
+   
+   # Change the run_corpus() function to:
+   run_corpus() {
+       echo "=== Step 2: Custom Inspiration Corpus Construction ==="
+       python -u ./Preprocessing/construct_custom_inspiration_corpus.py \
+               --custom_inspiration_corpus_path ${custom_inspiration_corpus_path} \
+               --method excel --raw_data_dir ${custom_raw_inspiration_data_dir}
+   }
+   ```
+   
    - Run the step:
 
 ```bash
 bash main.sh corpus
 ```
 
+**Alternative: Direct Python Command**
+
+You can also run the Excel processing directly without modifying main.sh:
+
+```bash
+python Preprocessing/construct_custom_inspiration_corpus.py \
+  --method excel \
+  --raw_data_dir "/path/to/your/excel/files" \
+  --custom_inspiration_corpus_path "./my_excel_corpus.json"
+```
+
 > ✅ Once done, this will generate a custom inspiration corpus file that can be used in later steps.
+
+> 💡 **Note**: By default, `bash main.sh corpus` uses the Semantic Scholar method. To use Excel files from Web of Science, you need to modify `main.sh` as shown above.
 
 
 ---
