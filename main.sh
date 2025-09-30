@@ -49,11 +49,11 @@ if [[ -z "$STEP" ]]; then
     usage
 fi
 
-model_name_insp_retrieval="gpt-4.1-nano-2025-04-14"
-model_name_gene="gpt-4.1-nano-2025-04-14"
-model_name_eval="gpt-4.1-nano-2025-04-14"
+model_name_insp_retrieval="gpt-4.1-2025-04-14"
+model_name_gene="gpt-4.1-2025-04-14"
+model_name_eval="gpt-4.1-2025-04-14"
 
-experiment_name="wyformer_v0.1"
+experiment_name="wyformer_v0.2"
 checkpoint_root_dir="./Checkpoints/"${experiment_name}
 mkdir -p ${checkpoint_root_dir}
 display_txt_file_path="hypothesis/"${experiment_name}".txt"
