@@ -25,9 +25,43 @@ import json
 import argparse
 import pandas as pd
 from semanticscholar import SemanticScholar
+import arxiv
 
 
-def build_inspiration_corpus_from_semanticscholar(paper_id, custom_inspiration_corpus_path, max_references=None):
+def retrieve_from_arxiv(arxiv_id):
+    """
+    Retrieve title and abstract from arXiv using an arXiv ID.
+    
+    Args:
+        arxiv_id (str): The arXiv ID (e.g., "1706.03762" or "arXiv:1706.03762")
+    
+    Returns:
+        tuple: (title, abstract) or (None, None) if not found
+    """
+    try:
+        # Clean the arXiv ID (remove "arXiv:" prefix if present)
+        clean_id = arxiv_id.replace("arXiv:", "").strip()
+
+        # Search for the paper by ID using the recommended Client.results method
+        client = arxiv.Client()
+        search = arxiv.Search(id_list=[clean_id])
+        paper = next(client.results(search), None)
+        
+        if paper:
+            title = paper.title.strip() if paper.title else None
+            abstract = paper.summary.strip() if paper.summary else None
+            print(f"  Retrieved from arXiv: {title}")
+            return title, abstract
+        else:
+            print(f"  Paper not found on arXiv: {clean_id}")
+            return None, None
+    except Exception as e:
+        print(f"  Error retrieving from arXiv ({arxiv_id}): {str(e)}")
+        return None, None
+
+
+def build_inspiration_corpus_from_semanticscholar(
+    paper_id, custom_inspiration_corpus_path, max_references=None):
     """
     Build an inspiration corpus using Semantic Scholar API to retrieve references of a given paper.
     
@@ -49,7 +83,7 @@ def build_inspiration_corpus_from_semanticscholar(paper_id, custom_inspiration_c
     try:
         # Get the paper details
         print(f"Retrieving paper details for: {paper_id}")
-        paper = sch.get_paper(paper_id, fields=['title', 'abstract', 'references', 'references.title', 'references.abstract'])
+        paper = sch.get_paper(paper_id, fields=['title', 'abstract', 'references', 'references.title', 'references.abstract', 'references.externalIds'])
         
         if not paper:
             print(f"Paper with ID {paper_id} not found.")
@@ -73,16 +107,27 @@ def build_inspiration_corpus_from_semanticscholar(paper_id, custom_inspiration_c
                 print(f"Processing {len(references_to_process)} out of {len(paper.references)} references")
             
             for ref in references_to_process:
-                if ref.title and ref.abstract:
-                    # Clean the title and abstract
-                    title = ref.title.strip()
-                    abstract = ref.abstract.strip()
-                    
-                    # Skip if title or abstract is empty after cleaning
-                    if title and abstract:
-                        all_ttl_abs.append([title, abstract])
+                title = ref.title.strip() if ref.title else None
+                abstract = ref.abstract.strip() if ref.abstract else None
+                
+                # If title or abstract is missing, try to retrieve from arXiv
+                if (not title or not abstract) and hasattr(ref, 'externalIds') and ref.externalIds:
+                    if 'ArXiv' in ref.externalIds:
+                        arxiv_id = ref.externalIds['ArXiv']
+                        print(f"Missing title or abstract for reference, attempting arXiv fallback with ID: {arxiv_id}")
+                        arxiv_title, arxiv_abstract = retrieve_from_arxiv(arxiv_id)
+                        
+                        # Use arXiv data if available and missing in Semantic Scholar
+                        if not title and arxiv_title:
+                            title = arxiv_title
+                        if not abstract and arxiv_abstract:
+                            abstract = arxiv_abstract
+                
+                # Only add if both title and abstract are available
+                if title and abstract:
+                    all_ttl_abs.append([title, abstract])
                 else:
-                    print(f"Skipping reference with missing title or abstract: {ref}")
+                    print(f"Skipping reference with missing title or abstract (even after arXiv fallback): {title}")
             
             print(f"Successfully extracted {len(all_ttl_abs)} title-abstract pairs from references")
         else:
