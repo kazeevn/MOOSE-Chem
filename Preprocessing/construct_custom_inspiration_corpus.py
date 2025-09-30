@@ -23,41 +23,86 @@ Output: A JSON file containing [[title, abstract], [title, abstract], ...] forma
 import os
 import json
 import argparse
+import re
 import pandas as pd
 from semanticscholar import SemanticScholar
 import arxiv
+from clean_text_artifacts import sanitize_abstract_text
+
+# Compiled regex pattern to match arXiv DOIs like 10.48550/arXiv.XXXX.XXXXX
+ARXIV_DOI_PATTERN = re.compile(r'10\.48550/arXiv\.(.+)', re.IGNORECASE)
 
 
-def retrieve_from_arxiv(arxiv_id):
+def retrieve_from_arxiv(arxiv_id=None, doi=None):
     """
-    Retrieve title and abstract from arXiv using an arXiv ID.
+    Retrieve title and abstract from arXiv using either an arXiv ID or a DOI.
     
     Args:
-        arxiv_id (str): The arXiv ID (e.g., "1706.03762" or "arXiv:1706.03762")
+        arxiv_id (str, optional): The arXiv ID (e.g., "1706.03762" or "arXiv:1706.03762")
+        doi (str, optional): The DOI to search for
     
     Returns:
         tuple: (title, abstract) or (None, None) if not found
+    
+    Note:
+        Exactly one of arxiv_id or doi must be provided.
     """
-    try:
-        # Clean the arXiv ID (remove "arXiv:" prefix if present)
-        clean_id = arxiv_id.replace("arXiv:", "").strip()
+    if not arxiv_id and not doi:
+        print("  Error: Either arxiv_id or doi must be provided")
+        return None, None
 
-        # Search for the paper by ID using the recommended Client.results method
+    if arxiv_id and doi:
+        print("  Error: Only one of arxiv_id or doi should be provided")
+        return None, None
+   
+    try:
         client = arxiv.Client()
-        search = arxiv.Search(id_list=[clean_id])
+       
+        if arxiv_id:
+            # Clean the arXiv ID (remove "arXiv:" prefix if present)
+            clean_id = arxiv_id.replace("arXiv:", "").strip()
+            search = arxiv.Search(id_list=[clean_id])
+            search_type = f"arXiv ID: {clean_id}"
+        else:  # doi is provided
+            search = arxiv.Search(query=f'doi:{doi}', max_results=1)
+            search_type = f"DOI: {doi}"
+
         paper = next(client.results(search), None)
-        
+
         if paper:
             title = paper.title.strip() if paper.title else None
             abstract = paper.summary.strip() if paper.summary else None
-            print(f"  Retrieved from arXiv: {title}")
+            
+            # Sanitize title and abstract to remove control codes and artifacts
+            if title:
+                title = sanitize_abstract_text(title)
+            if abstract:
+                abstract = sanitize_abstract_text(abstract)
+            
+            print(f"  Retrieved from arXiv ({search_type}): {title}")
             return title, abstract
         else:
-            print(f"  Paper not found on arXiv: {clean_id}")
+            print(f"  Paper not found on arXiv with {search_type}")
             return None, None
     except Exception as e:
-        print(f"  Error retrieving from arXiv ({arxiv_id}): {str(e)}")
+        print(f"  Error retrieving from arXiv ({search_type}): {str(e)}")
         return None, None
+
+
+def extract_arxiv_id_from_doi(doi):
+    """
+    Extract arXiv ID from DOI if it's an arXiv DOI.
+    
+    Args:
+        doi (str): The DOI string (e.g., "10.48550/arXiv.2308.14920")
+    
+    Returns:
+        str or None: The extracted arXiv ID (e.g., "2308.14920") or None if not an arXiv DOI
+    """
+    match = ARXIV_DOI_PATTERN.search(doi)
+    if match:
+        return match.group(1)
+    return None
 
 
 def build_inspiration_corpus_from_semanticscholar(
@@ -110,12 +155,39 @@ def build_inspiration_corpus_from_semanticscholar(
                 title = ref.title.strip() if ref.title else None
                 abstract = ref.abstract.strip() if ref.abstract else None
                 
+                # Sanitize title and abstract to remove control codes and artifacts
+                if title:
+                    title = sanitize_abstract_text(title)
+                if abstract:
+                    abstract = sanitize_abstract_text(abstract)
+                
                 # If title or abstract is missing, try to retrieve from arXiv
                 if (not title or not abstract) and hasattr(ref, 'externalIds') and ref.externalIds:
                     if 'ArXiv' in ref.externalIds:
                         arxiv_id = ref.externalIds['ArXiv']
                         print(f"Missing title or abstract for reference, attempting arXiv fallback with ID: {arxiv_id}")
-                        arxiv_title, arxiv_abstract = retrieve_from_arxiv(arxiv_id)
+                        arxiv_title, arxiv_abstract = retrieve_from_arxiv(arxiv_id=arxiv_id)
+                        
+                        # Use arXiv data if available and missing in Semantic Scholar
+                        if not title and arxiv_title:
+                            title = arxiv_title
+                        if not abstract and arxiv_abstract:
+                            abstract = arxiv_abstract
+                    
+                    # If ArXiv ID is not available, try DOI fallback
+                    elif 'DOI' in ref.externalIds and (not title or not abstract):
+                        doi = ref.externalIds['DOI']
+                        print(f"Missing title or abstract for reference, attempting DOI fallback with DOI: {doi}")
+                        
+                        # Check if DOI points to arXiv
+                        arxiv_id_from_doi = extract_arxiv_id_from_doi(doi)
+                        if arxiv_id_from_doi:
+                            print(f"  DOI points to arXiv, extracted ID: {arxiv_id_from_doi}")
+                            arxiv_title, arxiv_abstract = retrieve_from_arxiv(arxiv_id=arxiv_id_from_doi)
+                        else:
+                            # Use DOI in arXiv search query
+                            print(f"  Searching arXiv by DOI: {doi}")
+                            arxiv_title, arxiv_abstract = retrieve_from_arxiv(doi=doi)
                         
                         # Use arXiv data if available and missing in Semantic Scholar
                         if not title and arxiv_title:
@@ -127,7 +199,8 @@ def build_inspiration_corpus_from_semanticscholar(
                 if title and abstract:
                     all_ttl_abs.append([title, abstract])
                 else:
-                    print(f"Skipping reference with missing title or abstract (even after arXiv fallback): {title}")
+                    print(f"Missing title or abstract: ID:{ref.paperId}; title: {ref.title}")
+                    print(ref.externalIds)
             
             print(f"Successfully extracted {len(all_ttl_abs)} title-abstract pairs from references")
         else:
@@ -182,7 +255,10 @@ def load_title_abstract(raw_data_dir, custom_inspiration_corpus_path):
         for cur_id_ttl in range(len(cur_titles)):
             if nan_values['Article Title'][cur_id_ttl] or nan_values['Abstract'][cur_id_ttl]:
                 continue
-            cur_ttl_abs.append([cur_titles[cur_id_ttl].strip(), cur_abstracts[cur_id_ttl].strip()])
+            # Sanitize title and abstract to remove control codes and artifacts
+            title = sanitize_abstract_text(cur_titles[cur_id_ttl].strip())
+            abstract = sanitize_abstract_text(cur_abstracts[cur_id_ttl].strip())
+            cur_ttl_abs.append([title, abstract])
         print("len(cur_ttl_abs):", len(cur_ttl_abs))
         all_ttl_abs.extend(cur_ttl_abs)
     print("len(all_ttl_abs):", len(all_ttl_abs))
