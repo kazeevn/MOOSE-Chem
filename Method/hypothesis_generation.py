@@ -103,13 +103,14 @@ class HypothesisGenerationEA(object):
         # inter-EA recombination and self-explore extra knowledge for the second, the third, ... inspiration exploration step
         if self.args.max_inspiration_search_steps >= 2:
             for cur_step_id in range(2, self.args.max_inspiration_search_steps+1):
-                final_data_collection = self.controller_additional_inspiration_step_hypothesis_generation(background_question_id, final_data_collection, step_id=cur_step_id)
+                final_data_collection = self.controller_additional_inspiration_step_hypothesis_generation(
+                    background_question_id, final_data_collection, step_id=cur_step_id)
                 # save file
                 if self.args.if_save:
                     self.save_file(final_data_collection, self.args.output_dir)
         return final_data_collection
 
-    
+
     ## Function
     # Controller for the second inspiration step hypothesis generation (by second round inspiration screening or self-exploration of extra knowledge)
     #   Mainly to determine which recom_inspiration_ids and which self_explore_inspiration_ids for further exploration
@@ -118,7 +119,9 @@ class HypothesisGenerationEA(object):
     #       3. when recom_inspiration_ids or self_explore_inspiration_ids is specified, we will explore over the specified inspirations, w/o determining them based on the self-evaluation scores of the best hypothesis from each inspiration
     ## Input
     #   step_id: int; 1: about the first layer of inspiration/hypothesis node; 2: about the second layer of inspiration/hypothesis node; 3: about the third layer of inspiration/hypothesis node; ...
-    def controller_additional_inspiration_step_hypothesis_generation(self, background_question_id, final_data_collection, step_id):
+    def controller_additional_inspiration_step_hypothesis_generation(
+        self, background_question_id, final_data_collection, step_id):
+
         assert step_id >= 2
         if self.args.if_mutate_between_diff_insp == 1 or self.args.if_self_explore == 1:
             ## Obtain a ranked list of core inspiration ids based on the average score of the best hypothesis from each inspiration
@@ -138,15 +141,12 @@ class HypothesisGenerationEA(object):
 
         ### inter-EA recombination
         if self.args.if_mutate_between_diff_insp == 1:
-            final_data_collection = hyp_gene_ea.recombinational_mutation_between_diff_insp(background_question_id=background_question_id, ranked_top_insp_list=ranked_top_core_insp_id_hyp_ave_score_list, recom_inspiration_ids_user_input=self.args.recom_inspiration_ids, final_data_collection=final_data_collection, step_id=step_id)
+            final_data_collection = self.recombinational_mutation_between_diff_insp(background_question_id=background_question_id, ranked_top_insp_list=ranked_top_core_insp_id_hyp_ave_score_list, recom_inspiration_ids_user_input=self.args.recom_inspiration_ids, final_data_collection=final_data_collection, step_id=step_id)
 
         ### self-explore extra knowledge
         if self.args.if_self_explore == 1:
-            final_data_collection = hyp_gene_ea.self_explore_extra_knowledge_one_bkg_multiple_insp_node(background_question_id=background_question_id, ranked_top_insp_list=ranked_top_core_insp_id_hyp_ave_score_list, self_explore_inspiration_ids_user_input=self.args.self_explore_inspiration_ids, final_data_collection=final_data_collection, step_id=step_id)
-        
+            final_data_collection = self.self_explore_extra_knowledge_one_bkg_multiple_insp_node(background_question_id=background_question_id, ranked_top_insp_list=ranked_top_core_insp_id_hyp_ave_score_list, self_explore_inspiration_ids_user_input=self.args.self_explore_inspiration_ids, final_data_collection=final_data_collection, step_id=step_id)
         return final_data_collection
-    
-
 
 
     ## Function

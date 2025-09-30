@@ -62,7 +62,7 @@ def build_inspiration_corpus_from_semanticscholar(paper_id, custom_inspiration_c
             
         print(f"Found paper: {paper.title}")
         print(f"Number of references: {len(paper.references) if paper.references else 0}")
-        
+
         # Extract title-abstract pairs from references
         all_ttl_abs = []
         
@@ -81,6 +81,8 @@ def build_inspiration_corpus_from_semanticscholar(paper_id, custom_inspiration_c
                     # Skip if title or abstract is empty after cleaning
                     if title and abstract:
                         all_ttl_abs.append([title, abstract])
+                else:
+                    print(f"Skipping reference with missing title or abstract: {ref}")
             
             print(f"Successfully extracted {len(all_ttl_abs)} title-abstract pairs from references")
         else:
