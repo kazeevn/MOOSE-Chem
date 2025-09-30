@@ -6,7 +6,7 @@ import argparse
 def research_background_to_json(research_background_file_path):
     # YOUR RESEARCH QUESTION HERE
     research_question = '''
-    How can we design a generative model for materials that will produce stable, unique, novel, and realistic crystalline materials?
+    Design a generative model for materials that will produce stable, unique, novel, and realistic crystalline materials.
     '''
 
     # YOUR BACKGROUND SURVEY HERE
