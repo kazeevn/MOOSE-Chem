@@ -667,9 +667,6 @@ class HypothesisGenerationEA(object):
         # hypothesis_collection: [extra_knowledge_0, output_hyp_0, reasoning_process_0, feedback_0, refined_hyp_0]
         hypothesis_collection = [structured_extra_knowledge[1], sturctured_hyp_gene[0], sturctured_hyp_gene[1], feedback, sturctured_hyp_gene_refined[0], sturctured_hyp_gene_refined[1]]
         return structured_extra_knowledge[0], hypothesis_collection
-        
-    
-
 
     ## Function
     # A single search step that combines bkg and insp to generate one single hypothesis, and nothing more (no refinement)
@@ -706,7 +703,7 @@ class HypothesisGenerationEA(object):
         # core insp prompt
         cur_insp_core_node_prompt = "title: {}; abstract: {}; one of the potential reasons on why this inspiration could be helpful: {}.".format(cur_insp_core_node[0], cur_insp_core_node[2], cur_insp_core_node[1])
         
-        
+
         ## instructions
         if recombination_type == 2:
             assert other_mutations is not None
@@ -792,23 +789,22 @@ class HypothesisGenerationEA(object):
                 raise ValueError("should not have this case")
         else:
             raise ValueError(f"recombination_type: {recombination_type} is not supported")
-             
+
         ## generation
         while True:
-            try:
-                cur_gene = llm_generation(full_prompt, self.args.model_name, self.client, api_type=self.args.api_type)
-                cur_structured_gene = get_structured_generation_from_raw_generation(cur_gene, template=template)
-                cur_structured_gene = exchange_order_in_list(cur_structured_gene)
-                break
-            except AssertionError as e:
-                # if the format
-                print(f"AssertionError: {e}, try again..")
-        
+            #try:
+            cur_gene = llm_generation(full_prompt, self.args.model_name, self.client, api_type=self.args.api_type)
+            cur_structured_gene = get_structured_generation_from_raw_generation(cur_gene, template=template)
+            cur_structured_gene = exchange_order_in_list(cur_structured_gene)
+            break
+            #except AssertionError as e:
+            #    # if the format
+                #print(f"AssertionError: {e}, try again..")
+
         # cur_structured_gene: [[hyp, reasoning process]] --> [hyp, reasoning process]
         assert len(cur_structured_gene) == 1 and len(cur_structured_gene[0]) == 2
         cur_structured_gene = cur_structured_gene[0]
         return cur_structured_gene
-
 
 
     ## Function

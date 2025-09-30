@@ -671,7 +671,6 @@ def get_structured_generation_from_raw_generation(gene, template):
     return structured_gene
 
 
-
 def pick_score(cur_generation):
     """
     We have 4 categories, each with two parts:

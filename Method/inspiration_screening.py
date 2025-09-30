@@ -1,10 +1,9 @@
 import os, sys, argparse, json, builtins
 from openai import OpenAI, AzureOpenAI
+from google import genai
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from Method.utils import instruction_prompts, load_chem_annotation, organize_raw_inspirations, load_dict_title_2_abstract, recover_generated_title_to_exact_version_of_title, llm_generation_while_loop, exchange_order_in_list
 from Method.logging_utils import setup_logger
-from google import genai
-
 
 
 # Coarse grained inspiration screening
@@ -21,8 +20,8 @@ class Screening(object):
         # azure client
         elif args.api_type == 1:
             self.client = AzureOpenAI(
-                azure_endpoint = args.base_url, 
-                api_key=args.api_key,  
+                azure_endpoint = args.base_url,
+                api_key=args.api_key,
                 api_version="2024-06-01"
             )
         elif args.api_type == 2:
@@ -30,19 +29,22 @@ class Screening(object):
         else:
             raise NotImplementedError
         ## Load research background: Use the research question and background survey in Tomato-Chem or the custom ones from input
-        if custom_rq == None and custom_bs == None:
+        if custom_rq is None and custom_bs is None:
             # annotated bkg research question and its annotated groundtruth inspiration paper titles
-            self.bkg_q_list, self.dict_bkg2insp, self.dict_bkg2survey, self.dict_bkg2groundtruthHyp, self.dict_bkg2note, self.dict_bkg2idx, self.dict_idx2bkg, self.dict_bkg2reasoningprocess = load_chem_annotation(args.chem_annotation_path, self.args.if_use_strict_survey_question, self.args.if_use_background_survey)     
+            self.bkg_q_list, self.dict_bkg2insp, self.dict_bkg2survey, self.dict_bkg2groundtruthHyp, self.dict_bkg2note, \
+                self.dict_bkg2idx, self.dict_idx2bkg, self.dict_bkg2reasoningprocess = load_chem_annotation(
+                    args.chem_annotation_path, self.args.if_use_strict_survey_question, self.args.if_use_background_survey)
         else:
             print("INFO: Using custom_rq and custom_bs.")
-            assert custom_rq != None
+            assert custom_rq is not None
             self.bkg_q_list = [custom_rq]
             self.dict_bkg2survey = {custom_rq: custom_bs}
             self.dict_idx2bkg = {0: custom_rq} 
         ## Load inspiration corpus (by default is the groundtruth inspiration papers and random high-quality papers)
         # title_abstract_collector: [[title, abstract], ...]
         # dict_title_2_abstract: {'title': 'abstract', ...}
-        self.title_abstract_collector, self.dict_title_2_abstract = load_dict_title_2_abstract(title_abstract_collector_path=args.custom_inspiration_corpus_path)   
+        self.title_abstract_collector, self.dict_title_2_abstract = load_dict_title_2_abstract(
+            title_abstract_collector_path=args.custom_inspiration_corpus_path)
 
 
     # The main function to run coarse-grained inspiration screening. Multiple rounds of screening for each background research question supported.
@@ -203,14 +205,9 @@ class Screening(object):
         ratio_hit_in_top3 = hit_in_top3 / len(gdth_insp)
         print("len(gdth_insp): {}; len(all_extracted_titles): {}; ratio_hit_in_top1: {}; ratio_hit_in_top3: {}".format(len(gdth_insp), len(all_extracted_titles), ratio_hit_in_top1, ratio_hit_in_top3))
         return [ratio_hit_in_top1, ratio_hit_in_top3]
-    
 
 
-
-
-
-
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, default="chatgpt", help="model name: gpt4/chatgpt/chatgpt16k/claude35S/gemini15P/llama318b/llama3170b/llama31405b")
     parser.add_argument("--api_type", type=int, default=1, help="0: openai's API toolkit; 1: azure's API toolkit")
@@ -266,7 +263,6 @@ if __name__ == '__main__':
         assert os.path.exists(args.custom_inspiration_corpus_path), "The inspiration corpus file does not exist: {}".format(args.custom_inspiration_corpus_path)
         print("Using custom inspiration corpus: {}".format(args.custom_inspiration_corpus_path))
 
-
     ## Setup logger
     logger = setup_logger(args.output_dir)
     # Redirect print to logger
@@ -278,14 +274,14 @@ if __name__ == '__main__':
     builtins.print = custom_print
     print("args: ", args)
 
-    
-    
     # run Screening
     if os.path.exists(args.output_dir):
         print("Warning: The output_dir already exists. Will skip this retrival.")
     else:
         screening = Screening(args, custom_rq=custom_rq, custom_bs=custom_bs)
         screening.run()
-    
 
     print("Finished!")
+
+if __name__ == '__main__':
+    main()

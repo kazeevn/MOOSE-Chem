@@ -89,9 +89,7 @@ run_retrieval() {
     echo "=== Step 3: Inspiration Retrieval ==="
     python -u ./Method/inspiration_screening.py --model_name ${model_name_insp_retrieval} \
             --api_type ${api_type} --api_key ${api_key} --base_url ${base_url} \
-            --chem_annotation_path ./Data/chem_research_2024.xlsx \
             --output_dir ${checkpoint_root_dir}/coarse_inspiration_search_${model_name_insp_retrieval}_${output_dir_postfix}.json \
-            --corpus_size 150 --if_use_background_survey 1 --if_use_strict_survey_question 1 \
             --num_screening_window_size 15 --num_screening_keep_size 3 --num_round_of_screening 4 \
             --if_save 1 --background_question_id 0 --if_select_based_on_similarity 0 \
             --custom_research_background_path ${custom_research_background_path} \
@@ -102,14 +100,13 @@ run_generation() {
     echo "=== Step 4: Hypothesis Composition ==="
     python -u ./Method/hypothesis_generation.py --model_name ${model_name_gene} \
             --api_type ${api_type} --api_key ${api_key} --base_url ${base_url} \
-            --chem_annotation_path ./Data/chem_research_2024.xlsx --corpus_size 150 --if_use_strict_survey_question 1 --if_use_background_survey 1 \
             --inspiration_dir ${checkpoint_root_dir}/coarse_inspiration_search_${model_name_insp_retrieval}_${output_dir_postfix}.json \
             --output_dir ${checkpoint_root_dir}/hypothesis_generation_${model_name_gene}_${output_dir_postfix}.json \
             --if_save 1 --if_load_from_saved 0 \
             --if_use_gdth_insp 0 --idx_round_of_first_step_insp_screening 2 \
             --num_mutations 3 --num_itr_self_refine 3  --num_self_explore_steps_each_line 3 --num_screening_window_size 12 --num_screening_keep_size 3 \
             --if_mutate_inside_same_bkg_insp 1 --if_mutate_between_diff_insp 1 --if_self_explore 0 --if_consider_external_knowledge_feedback_during_second_refinement 0 \
-            --inspiration_ids -1  --recom_inspiration_ids  --recom_num_beam_size 5  --self_explore_inspiration_ids   --self_explore_num_beam_size 5 \
+            --inspiration_ids -1 --recom_inspiration_ids  --recom_num_beam_size 5 --self_explore_inspiration_ids --self_explore_num_beam_size 5 \
             --max_inspiration_search_steps 3 --background_question_id 0 \
             --custom_research_background_path ${custom_research_background_path} \
             --custom_inspiration_corpus_path ${custom_inspiration_corpus_path}
