@@ -93,7 +93,7 @@ class Evaluate(object):
                 for cur_mutation_id in final_data_collection[cur_background_question][cur_core_insp_title].keys():
                     if "inter_recom" not in cur_mutation_id and "self_explore" not in cur_mutation_id:
                         cur_hypothesis_collection = final_data_collection[cur_background_question][cur_core_insp_title][cur_mutation_id]
-                        cur_hyp = cur_hypothesis_collection[-1][0]
+                        cur_hyp = cur_hypothesis_collection[-1][1]
                         cur_scores = cur_hypothesis_collection[-1][-1][0]
                         assert len(cur_scores) == 4
                         cur_ave_score = np.mean(cur_scores)
@@ -106,7 +106,7 @@ class Evaluate(object):
                         for cur_core_insp_title_best_mutation_id in cur_hypothesis_collection.keys():
                             for cur_matched_insp_title in cur_hypothesis_collection[cur_core_insp_title_best_mutation_id].keys():
                                 cur_data = cur_hypothesis_collection[cur_core_insp_title_best_mutation_id][cur_matched_insp_title]
-                                cur_hyp = cur_data[-1][0]
+                                cur_hyp = cur_data[-1][1]
                                 cur_scores = cur_data[-1][-1][0]
                                 assert len(cur_scores) == 4
                                 cur_ave_score = np.mean(cur_scores)
