@@ -21,7 +21,7 @@ class Evaluate(object):
         elif args.api_type == 1:
             self.client = AzureOpenAI(
                 azure_endpoint = args.base_url, 
-                api_key=args.api_key,  
+                api_key=args.api_key,
                 api_version="2024-06-01"
             )
         # google client
