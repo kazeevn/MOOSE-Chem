@@ -40,6 +40,35 @@ In general, **MOOSE-Chem** contains three stages:
 
 The commands for the three stages are introduced after the "quick start".
 
+---
+
+## 🏗️ Improved Architecture
+
+**MOOSE-Chem** now features an improved, modular architecture following software engineering best practices:
+
+- **Configuration Management**: Type-safe configuration using Pydantic Settings
+- **LLM Abstraction Layer**: Unified interface for OpenAI, Azure, and Google LLM providers
+- **Data Models**: Strongly-typed data structures with automatic validation
+- **Comprehensive Testing**: Unit tests for all new components
+
+📖 **See [ARCHITECTURE.md](ARCHITECTURE.md)** for detailed documentation and usage examples.
+
+🔧 **See [REWRITE.md](REWRITE.md)** for the architectural suggestions that guided this refactoring.
+
+💡 **Quick example:**
+```python
+from Method.llm_client import create_llm_client
+from Method.models import Hypothesis
+
+# Easy provider switching
+client = create_llm_client(provider="openai", api_key="...", model="gpt-4")
+response = client.generate(prompt="Your prompt here")
+
+# Automatic validation
+hypothesis = Hypothesis(text="...", scores=[8.5, 9.0])
+print(hypothesis.average_score)  # 8.75
+```
+
 --- 
 
 ## ⚡ Step 0: Quick Start
