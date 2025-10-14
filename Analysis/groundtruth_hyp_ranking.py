@@ -1,8 +1,21 @@
 import os, sys, argparse, json, time, copy, math
 from openai import OpenAI, AzureOpenAI
+from pydantic import BaseModel, Field
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from Method.utils import load_chem_annotation, instruction_prompts, llm_generation, pick_score
+from Method.utils import load_chem_annotation, instruction_prompts, llm_generation_structured
 import numpy as np
+
+
+class HypothesisScore(BaseModel):
+    """Pydantic schema for structured hypothesis scoring with four aspects."""
+    validness_reason: str = Field(..., description="Concise reason for validness score")
+    validness_score: int = Field(..., ge=1, le=5, description="Validness score from 1 to 5")
+    novelty_reason: str = Field(..., description="Concise reason for novelty score")
+    novelty_score: int = Field(..., ge=1, le=5, description="Novelty score from 1 to 5")
+    significance_reason: str = Field(..., description="Concise reason for significance score")
+    significance_score: int = Field(..., ge=1, le=5, description="Significance score from 1 to 5")
+    specificity_reason: str = Field(..., description="Concise reason for specificity score")
+    specificity_score: int = Field(..., ge=1, le=5, description="Specificity score from 1 to 5")
 
 
 class GroundTruth_Hyp_Ranking(object):
@@ -36,18 +49,28 @@ class GroundTruth_Hyp_Ranking(object):
         # cur_hypothesis_prompt: for evaluation, we only need the hypothesis itself, but not reasoning process
         cur_hypothesis_prompt = f"hypothesis: {cur_hyp}."
         full_prompt = prompts[0] + cur_hypothesis_prompt + prompts[1]
-        # generation
-        while True:
-            try:
-                score_text = llm_generation(full_prompt, self.args.model_name, self.client)
-                score_collection, score_reason_collection, if_successful = pick_score(score_text, full_prompt)
-                assert if_successful == True
-                break
-            except AssertionError as e:
-                # if the format
-                print(f"AssertionError: {e}, try again..")
-            except Exception as e:
-                print(f"Exception: {e}, try again..")
+        # generation using structured output
+        structured_output = llm_generation_structured(
+            full_prompt, 
+            self.args.model_name, 
+            self.client, 
+            template=HypothesisScore, 
+            temperature=1.0, 
+            api_type=self.args.api_type
+        )
+        # Extract scores and reasons from the structured output
+        score_collection = [
+            structured_output.validness_score,
+            structured_output.novelty_score,
+            structured_output.significance_score,
+            structured_output.specificity_score
+        ]
+        score_reason_collection = [
+            structured_output.validness_reason,
+            structured_output.novelty_reason,
+            structured_output.significance_reason,
+            structured_output.specificity_reason
+        ]
         return score_collection, score_reason_collection
 
 

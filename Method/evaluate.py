@@ -1,13 +1,16 @@
 import os, sys, argparse, json, time, copy, math, builtins
 import numpy as np
 from openai import OpenAI, AzureOpenAI
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from Method.utils import load_chem_annotation, instruction_prompts, llm_generation_while_loop, recover_generated_title_to_exact_version_of_title, load_dict_title_2_abstract, if_element_in_list_with_similarity_threshold, exchange_order_in_list
-from Method.logging_utils import setup_logger
 from google import genai
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from Method.utils import (
+    load_chem_annotation, instruction_prompts, 
+    recover_generated_title_to_exact_version_of_title,
+    load_dict_title_2_abstract, if_element_in_list_with_similarity_threshold,
+    llm_generation_structured, EvaluationResponse)
+from Method.logging_utils import setup_logger
 
 class Evaluate(object):
-
     def __init__(self, args) -> None:
         self.args = args
         ## Set API client
@@ -162,13 +165,12 @@ class Evaluate(object):
         prompts = instruction_prompts('eval_matched_score')
         full_prompt = prompts[0] + gene_hyp + prompts[1] + gold_hyp + prompts[2] + keypoints + prompts[3]
         # structured_gene: [matched_score, reason]
-        structured_gene = llm_generation_while_loop(
+        structured_gene = llm_generation_structured(
             full_prompt, self.args.model_name, self.client,
-            if_structured_generation=True, template=['Reason:', 'Matched score:'],
-            temperature=0.0, restructure_output_model_name=self.args.model_name, api_type=self.args.api_type)
-        structured_gene = exchange_order_in_list(structured_gene)
+            template=EvaluationResponse,
+            temperature=0.0, api_type=self.args.api_type)
         return structured_gene
-        
+
 
     ## Function:
     # print the average score of those generated hypotheses with the most similar inspirations with the ground truth hypothesis

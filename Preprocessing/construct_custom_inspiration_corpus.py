@@ -54,7 +54,7 @@ def retrieve_from_arxiv(arxiv_id=None, doi=None):
     if arxiv_id and doi:
         print("  Error: Only one of arxiv_id or doi should be provided")
         return None, None
-   
+
     try:
         client = arxiv.Client()
        
@@ -81,9 +81,9 @@ def retrieve_from_arxiv(arxiv_id=None, doi=None):
             
             print(f"  Retrieved from arXiv ({search_type}): {title}")
             return title, abstract
-        else:
-            print(f"  Paper not found on arXiv with {search_type}")
-            return None, None
+
+        print(f"  Paper not found on arXiv with {search_type}")
+        return None, None
     except Exception as e:
         print(f"  Error retrieving from arXiv ({search_type}): {str(e)}")
         return None, None
