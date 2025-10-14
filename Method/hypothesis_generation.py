@@ -165,8 +165,8 @@ class HypothesisGenerationEA(object):
         # this function is at least used for the second layer of nodes
         assert step_id >= 2
         # this_recom_mutation_id = "inter_recom" if step_id == 2 else "inter_recom_{}".format(step_id-1)
-        this_recom_mutation_id = "inter_recom_{}".format(step_id-1)
-        print("\n\nInter-EA Step: {}".format(step_id))
+        this_recom_mutation_id = f"inter_recom_{step_id - 1}"
+        print(f"\n\nInter-EA Step: {step_id}")
         ## get filtered_ranked_top_insp_list (filter based on recom_inspiration_ids_user_input or args.recom_num_beam_size)
         # filtered_ranked_top_insp_list: [[core_insp_id, hypothesis, hypothesis_score, [mutation_id], ave_score], ...]; used to determine which nodes to further expand / explore
         if -1 in recom_inspiration_ids_user_input:

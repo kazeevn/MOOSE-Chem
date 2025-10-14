@@ -29,8 +29,9 @@ class Evaluate(object):
             self.client = genai.Client(api_key=args.api_key)
         else:
             raise NotImplementedError
-        # annotated bkg research question and its annotated groundtruth inspiration paper titles
-        self.bkg_q_list, self.dict_bkg2insp, self.dict_bkg2survey, self.dict_bkg2groundtruthHyp, self.dict_bkg2note, self.dict_bkg2idx, self.dict_idx2bkg, self.dict_bkg2reasoningprocess = load_chem_annotation(args.chem_annotation_path, self.args.if_use_strict_survey_question)   
+        if args.chem_annotation_path:
+            # annotated bkg research question and its annotated groundtruth inspiration paper titles
+            self.bkg_q_list, self.dict_bkg2insp, self.dict_bkg2survey, self.dict_bkg2groundtruthHyp, self.dict_bkg2note, self.dict_bkg2idx, self.dict_idx2bkg, self.dict_bkg2reasoningprocess = load_chem_annotation(args.chem_annotation_path, self.args.if_use_strict_survey_question)   
         # title_abstract_collector: [[title, abstract], ...]
         # dict_title_2_abstract: {'title': 'abstract', ...}
         self.title_abstract_collector, self.dict_title_2_abstract = load_dict_title_2_abstract(title_abstract_collector_path=args.custom_inspiration_corpus_path)  
@@ -117,8 +118,8 @@ class Evaluate(object):
                                 cur_index = find_index([x[1] for x in ranked_hypothesis_collection[cur_background_question]], cur_ave_score)
                                 ranked_hypothesis_collection[cur_background_question].insert(cur_index, [cur_hyp, cur_ave_score, cur_scores, cur_core_insp_title, cur_round_id, [cur_core_insp_title, cur_mutation_id, cur_core_insp_title_best_mutation_id, cur_matched_insp_title]])
         return ranked_hypothesis_collection
-                                
-        
+                               
+
     ## Function:
     # automatic evaluation by reference 
     #   only evaluate those hypotheses whose core_insp_title is in the groundtruth inspiration paper titles, and append matched score to ranked_hypothesis
@@ -221,7 +222,7 @@ if __name__ == '__main__':
     parser.add_argument("--api_type", type=int, default=1, help="0: openai's API toolkit; 1: azure's API toolkit")
     parser.add_argument("--api_key", type=str, default="")
     parser.add_argument("--base_url", type=str, default="https://api.claudeshop.top/v1", help="base url for the API")
-    parser.add_argument("--chem_annotation_path", type=str, default="./chem_research_2024.xlsx", help="store annotated background research questions and their annotated groundtruth inspiration paper titles")
+    parser.add_argument("--chem_annotation_path", type=str, help="Annotated background research questions and their annotated ground-truth inspiration paper titles")
     parser.add_argument("--if_use_strict_survey_question", type=int, default=1, help="whether to use the strict version of background survey and background question. strict version means the background should not have any close information to inspirations and the hypothesis, even if the close information is a commonly used method in that particular background question domain.")
     parser.add_argument("--custom_inspiration_corpus_path", type=str, default="", help="store title and abstract of the inspiration corpus; Should be a json file in a format of [[title, abstract], ...]; It will be automatically assigned with a default value if it is not assigned by users. The default value is './Data/Inspiration_Corpus_{}.json'.format(args.corpus_size). (The default value is the groundtruth inspiration papers for the Tomato-Chem Benchmark and random high-quality papers)")
     parser.add_argument("--hypothesis_dir", type=str, default="./Checkpoints/hypothesis_generation_gpt4_bkgid_0.json")
