@@ -1,6 +1,7 @@
 import re
 import json
 import time
+import logging
 import pandas as pd
 from google.genai import types
 from pydantic import BaseModel, Field
@@ -23,6 +24,9 @@ except ImportError:
         get_max_completion_tokens, calculate_retry_delay
     )
 
+# Get logger
+logger = logging.getLogger("my_application_logger")
+
 # Legacy constants for backwards compatibility
 DISCIPLINE = hypothesis_config.DISCIPLINE
 MUTATION_CUSTOM_GUIDE = hypothesis_config.MUTATION_CUSTOM_GUIDE
@@ -32,6 +36,29 @@ HYPTHESIS_GENERATION_CUSTOM_GUIDE = hypothesis_config.HYPOTHESIS_GENERATION_CUST
 # A collection of prompts for different modules
 # more_info: currently only used in additional_round_inspiration_screening, which is a number indicating the number of inspirations to select
 def instruction_prompts(module_name, more_info=None):
+    """
+    Generate instruction prompts for different stages of hypothesis generation.
+    
+    This function returns prompt templates for various stages of the MOOSE-Chem pipeline:
+    - Inspiration screening (first round and additional rounds)
+    - Hypothesis generation (with or without inspiration)
+    - Hypothesis refinement and evaluation
+    - Various checking modes (validity, novelty, clarity, significance)
+    
+    Args:
+        module_name: Name of the module/stage (e.g., "first_round_inspiration_screening")
+        more_info: Additional information needed for some prompts (e.g., number of inspirations)
+        
+    Returns:
+        List of prompt strings that can be concatenated with input data
+        
+    Raises:
+        NotImplementedError: If module_name is not recognized
+        
+    Note:
+        The prompts use global configuration variables like DISCIPLINE and 
+        HYPTHESIS_GENERATION_CUSTOM_GUIDE from the hypothesis_config module.
+    """
     if module_name == "first_round_inspiration_screening":
         prompts = ["You are helping with the scientific hypotheses generation process. We in general split the period of research hypothesis proposal into three steps. Firstly it's about finding a good and specific background research question, and an introduction of the previous methods under the same topic; Secondly its about finding inspirations (mostly from literatures), which combined with the background research question, can lead to an impactful research hypothesis; Finally it's hypothesis generation based on the background research question and found inspirations. Usually a paper can be choosed as an inspiration is because it can potentially help to solve or alleviate one problem of a previous method for this research question so that leveraging the concepts related to the inspiration, a better method can be developed based on the previous methods and this inspiration. Take backpropagation as an example, the research question is how to use data to automatically improve the parameters of a multi-layer logistic regression with data, the inspiration is the chain rule in mathematics, and the research hypothesis is the backpropagation itself. Here the previous method can only inference the multi-layer logistic regression, but can't automatically update its parameters to learn from data. The selected chain rule inspiration can be leveraged to automatically update the parameters in the multi-layer logistic regression, and therefore improve over the previous method to create hypothesis. \nGiven a research question, the background and some of the existing methods for this research question, and several top-tier publications (including their title and abstract), try to identify which publication can potentially serve as an inspiration for the background research question so that combining the research question and the inspiration in some way, a novel, valid, and significant research hypothesis can be formed. Now try to select inspirations based on the background research question. \nThe background research question is: ", "\n\nThe introduction of the previous methods is:", "\n\nThe potential inspiration candidates are: ", "\n\nNow you have seen the background research question, existing methods, and many potential inspiration candidates. Please try to identify which three literature candidates are the most possible to serve as the inspiration to the background research question? Please name the title of the literature candidate, and also try to give your reasons."]
     elif module_name == "first_round_inspiration_screening_only_based_on_semantic_similarity":
@@ -523,6 +550,10 @@ def llm_generation(prompt, model_name, client, temperature=1., api_type=0):
     
     max_completion_tokens = get_max_completion_tokens(model_name)
     
+    # Log the API call
+    logger.debug(f"LLM API call: model={model_name}, temperature={temperature}, "
+                f"prompt_length={len(prompt)}, api_type={api_type}")
+    
     # Retry loop with exponential backoff
     last_exception = None
     for cur_trial in range(llm_config.MAX_RETRIES):
@@ -553,24 +584,32 @@ def llm_generation(prompt, model_name, client, temperature=1., api_type=0):
             # Validate response
             if not generation:
                 raise ValueError("Empty response from LLM")
-                
+            
+            # Log successful generation
+            logger.debug(f"LLM generation successful: response_length={len(generation)}")
             return generation
             
         except Exception as e:
             last_exception = e
-            print(f"API Error on attempt {cur_trial + 1}/{llm_config.MAX_RETRIES}: {e}")
+            error_msg = f"API Error on attempt {cur_trial + 1}/{llm_config.MAX_RETRIES}: {e}"
+            logger.warning(error_msg)
+            print(error_msg)
             
             # Don't sleep on last retry
             if cur_trial < llm_config.MAX_RETRIES - 1:
                 delay = calculate_retry_delay(cur_trial)
-                print(f"Retrying in {delay:.2f} seconds...")
+                retry_msg = f"Retrying in {delay:.2f} seconds..."
+                logger.debug(retry_msg)
+                print(retry_msg)
                 time.sleep(delay)
     
     # All retries failed
-    raise Exception(
+    error_msg = (
         f"Failed to get generation after {llm_config.MAX_RETRIES} attempts. "
         f"Last error: {last_exception}"
     )
+    logger.error(error_msg)
+    raise Exception(error_msg)
 
 
 def get_structured_generation_from_raw_generation_by_llm(gene, template, client, temperature, model_name, api_type):
