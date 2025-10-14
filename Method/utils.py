@@ -476,30 +476,99 @@ def load_coarse_grained_hypotheses(coarse_grained_hypotheses_path):
     return coarse_grained_hypotheses
 
 
-# Call Openai API,k input is prompt, output is response
-def llm_generation(prompt, model_name, client, temperature=1., api_type=0):
-    # print("prompt: ", prompt)
+# LLM Configuration
+class LLMConfig:
+    """Configuration for LLM API calls."""
+    # Maximum completion tokens based on model type
+    MAX_COMPLETION_TOKENS_CLAUDE_HAIKU = 4096
+    MAX_COMPLETION_TOKENS_DEFAULT = 8192
+    
+    # Retry configuration
+    MAX_RETRIES = 3
+    INITIAL_RETRY_DELAY = 0.5  # seconds
+    MAX_RETRY_DELAY = 5.0  # seconds
+    BACKOFF_MULTIPLIER = 2.0
+    
+    # API types
+    API_TYPE_OPENAI = 0
+    API_TYPE_AZURE = 1
+    API_TYPE_GOOGLE = 2
+
+
+def _get_max_completion_tokens(model_name: str) -> int:
+    """
+    Determine max completion tokens based on model name.
+    
+    Args:
+        model_name: Name of the model
+        
+    Returns:
+        Maximum completion tokens for the model
+    """
     if "claude-3-haiku" in model_name:
-        max_completion_tokens = 4096
-    else:
-        max_completion_tokens = 8192
-    cnt_max_trials = 1
-    # start inference util we get generation
-    for cur_trial in range(cnt_max_trials):
+        return LLMConfig.MAX_COMPLETION_TOKENS_CLAUDE_HAIKU
+    return LLMConfig.MAX_COMPLETION_TOKENS_DEFAULT
+
+
+def _calculate_retry_delay(trial: int) -> float:
+    """
+    Calculate exponential backoff delay for retries.
+    
+    Args:
+        trial: Current trial number (0-indexed)
+        
+    Returns:
+        Delay in seconds
+    """
+    delay = LLMConfig.INITIAL_RETRY_DELAY * (LLMConfig.BACKOFF_MULTIPLIER ** trial)
+    return min(delay, LLMConfig.MAX_RETRY_DELAY)
+
+
+def llm_generation(prompt, model_name, client, temperature=1., api_type=0):
+    """
+    Call LLM API to generate text response.
+    
+    Args:
+        prompt: Input prompt string
+        model_name: Name of the model to use
+        client: API client (OpenAI, Azure, or Google)
+        temperature: Sampling temperature (0-2)
+        api_type: Type of API (0=OpenAI, 1=Azure, 2=Google)
+        
+    Returns:
+        Generated text string
+        
+    Raises:
+        ValueError: If prompt is empty or invalid
+        NotImplementedError: If api_type is not supported
+        Exception: If all retry attempts fail
+    """
+    # Validation
+    if not prompt or not isinstance(prompt, str):
+        raise ValueError(f"Invalid prompt: must be a non-empty string, got {type(prompt)}")
+    if not model_name:
+        raise ValueError("model_name cannot be empty")
+    if not (0 <= temperature <= 2):
+        raise ValueError(f"temperature must be between 0 and 2, got {temperature}")
+    
+    max_completion_tokens = _get_max_completion_tokens(model_name)
+    
+    # Retry loop with exponential backoff
+    last_exception = None
+    for cur_trial in range(LLMConfig.MAX_RETRIES):
         try:
-            if api_type in [0, 1]:
+            if api_type in [LLMConfig.API_TYPE_OPENAI, LLMConfig.API_TYPE_AZURE]:
                 completion = client.chat.completions.create(
-                model=model_name,
-                temperature=temperature,
-                max_completion_tokens=max_completion_tokens,
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": prompt}
+                    model=model_name,
+                    temperature=temperature,
+                    max_completion_tokens=max_completion_tokens,
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant."},
+                        {"role": "user", "content": prompt}
                     ]
                 )
                 generation = completion.choices[0].message.content.strip()
-            # google client
-            elif api_type == 2:
+            elif api_type == LLMConfig.API_TYPE_GOOGLE:
                 response = client.models.generate_content(
                     model=model_name,
                     contents=prompt,
@@ -509,49 +578,116 @@ def llm_generation(prompt, model_name, client, temperature=1., api_type=0):
                 )
                 generation = response.text.strip()
             else:
-                raise NotImplementedError
-            break
+                raise NotImplementedError(f"Unsupported api_type: {api_type}")
+            
+            # Validate response
+            if not generation:
+                raise ValueError("Empty response from LLM")
+                
+            return generation
+            
         except Exception as e:
-            print("API Error occurred: ", e)
-            time.sleep(0.25)
-            if cur_trial == cnt_max_trials - 1:
-                raise Exception("Failed to get generation after {} trials because of API error: {}.".format(cnt_max_trials, e))
-    # print("generation: ", generation)
-    return generation
+            last_exception = e
+            print(f"API Error on attempt {cur_trial + 1}/{LLMConfig.MAX_RETRIES}: {e}")
+            
+            # Don't sleep on last retry
+            if cur_trial < LLMConfig.MAX_RETRIES - 1:
+                delay = _calculate_retry_delay(cur_trial)
+                print(f"Retrying in {delay:.2f} seconds...")
+                time.sleep(delay)
+    
+    # All retries failed
+    raise Exception(
+        f"Failed to get generation after {LLMConfig.MAX_RETRIES} attempts. "
+        f"Last error: {last_exception}"
+    )
 
 
 def get_structured_generation_from_raw_generation_by_llm(gene, template, client, temperature, model_name, api_type):
-    assert isinstance(gene, str), print("type(gene): ", type(gene))
-    # use .strip("#") to remove the '#' or "*" in the gene (the '#' or "*" is usually added by the LLM as a markdown format); used to match text (eg, title)
-    gene = re.sub("[#*]", "", gene).strip()
-    assert len(template) == 2, print("template: ", template)
-    # In your answer, please only mention the words in the template when use it as a template. For example, if the template is ['Hypothesis:', 'Reasoning Process:'], then your answer should not contain 'Analysis of the Hypothesis:', since it also contain 'Hypothesis:'.
-    # Whenever there are information in the passage related to the template, please restructure the information into the template format;
-    prompt = "You are a helpful assistant.\nPlease help to organize the following passage into a structured format, following the template. When restructure the passage with the template, please try not to rephrase but to use the original information in the passage (to avoid information distortion). If the template is only about a subset of information in the passage, you can extract only that subset of information to fill the template. If there is no such information for the template in the passage, please still output the exact template first, and fill the content for the template as 'None'. \n\nThe passage is: \n" + gene + f"\n\nThe template is: \n{template[0]} \n{template[1]} \n. Now, please restructure the passage strictly with the template (literally strictly, e.g., the case style of the template should also remain the same when used to restructure the passage)."
-    # print("prompt: ", prompt)
+    """
+    Extract structured information from raw LLM generation using a template.
     
-    # while loop to make sure there will be one successful generation
+    This function takes unstructured text and reformats it according to a template
+    by asking the LLM to restructure the content.
+    
+    Args:
+        gene: Raw generated text to restructure
+        template: List of exactly 2 template fields (e.g., ['Hypothesis:', 'Reasoning Process:'])
+        client: API client
+        temperature: Initial sampling temperature
+        model_name: Name of the model
+        api_type: Type of API
+        
+    Returns:
+        Structured generation matching the template format
+        
+    Raises:
+        ValueError: If inputs are invalid
+        Exception: If restructuring fails after all attempts
+    """
+    # Validation
+    if not isinstance(gene, str):
+        raise ValueError(f"gene must be a string, got {type(gene)}")
+    if not gene.strip():
+        raise ValueError("gene cannot be empty or only whitespace")
+    if not isinstance(template, list) or len(template) != 2:
+        raise ValueError(f"template must be a list of exactly 2 elements, got {template}")
+    
+    # Clean the input: remove markdown symbols that LLM often adds
+    gene = re.sub("[#*]", "", gene).strip()
+    
+    # Create restructuring prompt
+    prompt = (
+        "You are a helpful assistant.\n"
+        "Please help to organize the following passage into a structured format, following the template. "
+        "When restructuring the passage with the template, please try not to rephrase but to use the "
+        "original information in the passage (to avoid information distortion). "
+        "If the template is only about a subset of information in the passage, you can extract only that "
+        "subset of information to fill the template. If there is no such information for the template in "
+        "the passage, please still output the exact template first, and fill the content for the template "
+        "as 'None'.\n\n"
+        f"The passage is:\n{gene}\n\n"
+        f"The template is:\n{template[0]}\n{template[1]}\n\n"
+        "Now, please restructure the passage strictly with the template (literally strictly, e.g., the "
+        "case style of the template should also remain the same when used to restructure the passage)."
+    )
+    
+    # Retry loop with temperature adjustment
     max_trials = 10
+    current_temperature = temperature
+    last_exception = None
+    
     for cur_trial in range(max_trials):
         try:
-            generation = llm_generation(prompt, model_name, client, temperature=temperature, api_type=api_type)
-            # print("generation (in): ", generation)
-            structured_gene = get_structured_generation_from_raw_generation(generation, template=template)
-            # print("structured_gene (in): ", structured_gene)
+            generation = llm_generation(
+                prompt, model_name, client, 
+                temperature=current_temperature, 
+                api_type=api_type
+            )
+            
+            structured_gene = get_structured_generation_from_raw_generation(
+                generation, template=template
+            )
+            
             return structured_gene
+            
         except Exception as e:
-            if temperature < 2.0:
-                temperature += 0.25
-            # Q: do not change to more powerful model, since different users might have different model_name (even for the same model)
-            # if temperature >= 0.7:
-            #     model_name = "gpt-4o"
-            # if the format of feedback is wrong, try again in the while loop
-            print("generation (in): ", generation)
-            print("template: ", template)
-            print("Exception (in): {}, try again..".format(repr(e)))
-            print(f"update temperature to {temperature} and use {model_name} for extraction in case new generation can be successful..")
-    # print("structured_gene: ", structured_gene)
-    raise Exception("Failed to restructure the passage with the template after {} trials.".format(max_trials))
+            last_exception = e
+            # Increase temperature to encourage more varied attempts
+            if current_temperature < 2.0:
+                current_temperature = min(current_temperature + 0.25, 2.0)
+            
+            print(f"Restructuring attempt {cur_trial + 1}/{max_trials} failed: {repr(e)}")
+            print(f"Template: {template}")
+            if 'generation' in locals():
+                print(f"Generated text: {generation[:200]}...")  # Show first 200 chars
+            print(f"Increasing temperature to {current_temperature} for next attempt")
+    
+    # All attempts failed
+    raise Exception(
+        f"Failed to restructure the passage with the template after {max_trials} attempts. "
+        f"Last error: {last_exception}"
+    )
 
 
 # Define Pydantic models for structured outputs
@@ -594,22 +730,30 @@ def llm_generation_structured(prompt, model_name, client, template:BaseModel, te
     Generate structured output using OpenAI's structured outputs feature.
     
     Args:
-        prompt: The input prompt
-        model_name: The model to use
-        client: The OpenAI client
-        template: List of field names like ['Reasoning Process:', 'Hypothesis:']
-        temperature: Temperature for generation
+        prompt: The input prompt string
+        model_name: Name of the model to use
+        client: API client (OpenAI or Azure)
+        template: Pydantic BaseModel class defining the expected structure
+        temperature: Sampling temperature (0-2)
         api_type: API type (0=OpenAI, 1=Azure, 2=Google)
     
     Returns:
-        List containing the structured response
+        Structured response converted to list format based on template type
+        
+    Raises:
+        ValueError: If inputs are invalid
+        NotImplementedError: If api_type doesn't support structured outputs
+        RuntimeError: If all retry attempts fail
     """
-    if "claude-3-haiku" in model_name:
-        max_completion_tokens = 4096
-    else:
-        max_completion_tokens = 8192
-
-    cnt_max_trials = 3
+    # Validation
+    if not prompt or not isinstance(prompt, str):
+        raise ValueError(f"Invalid prompt: must be a non-empty string, got {type(prompt)}")
+    if not model_name:
+        raise ValueError("model_name cannot be empty")
+    if not (0 <= temperature <= 2):
+        raise ValueError(f"temperature must be between 0 and 2, got {temperature}")
+    
+    max_completion_tokens = _get_max_completion_tokens(model_name)
 
     # Determine which response model to use based on template
     if not issubclass(template, BaseModel):
@@ -625,18 +769,20 @@ def llm_generation_structured(prompt, model_name, client, template:BaseModel, te
     else:
         response_format = template
 
-    for cur_trial in range(cnt_max_trials):
+    # Retry loop with exponential backoff
+    last_exception = None
+    for cur_trial in range(LLMConfig.MAX_RETRIES):
         try:
-            if api_type in [0, 1]:  # OpenAI or Azure
+            if api_type in [LLMConfig.API_TYPE_OPENAI, LLMConfig.API_TYPE_AZURE]:
                 # Use the beta structured outputs API
-
                 completion = client.beta.chat.completions.parse(
                     model=model_name,
                     temperature=temperature,
                     max_completion_tokens=max_completion_tokens,
                     messages=[
                         {"role": "system", "content":
-                                 "You are a helpful and knowlegeble scientist. Provide your response in the exact format requested."},
+                                 "You are a helpful and knowledgeable scientist. "
+                                 "Provide your response in the exact format requested."},
                         {"role": "user", "content": prompt}
                     ],
                     response_format=response_format
@@ -644,6 +790,9 @@ def llm_generation_structured(prompt, model_name, client, template:BaseModel, te
                 
                 # Parse the structured response
                 response_data = completion.choices[0].message.parsed
+                
+                if not response_data:
+                    raise ValueError("Empty structured response from LLM")
                 
                 # Convert to the expected format
                 if isinstance(response_data, HypothesisResponse):
@@ -656,13 +805,25 @@ def llm_generation_structured(prompt, model_name, client, template:BaseModel, te
                     return response_data
 
             else:
-                raise NotImplementedError(f"Structured outputs not implemented for api_type {api_type}")
+                raise NotImplementedError(
+                    f"Structured outputs not implemented for api_type {api_type}. "
+                    f"Only OpenAI (0) and Azure (1) are supported."
+                )
                 
         except Exception as e:
-            print(f"Structured generation attempt {cur_trial + 1} failed: {e}")
-            print("Retrying...")
-            time.sleep(0.25)
-    raise RuntimeError(f"Failed to get structured generation after {cnt_max_trials} trials.")
+            last_exception = e
+            print(f"Structured generation attempt {cur_trial + 1}/{LLMConfig.MAX_RETRIES} failed: {e}")
+            
+            # Don't sleep on last retry
+            if cur_trial < LLMConfig.MAX_RETRIES - 1:
+                delay = _calculate_retry_delay(cur_trial)
+                print(f"Retrying in {delay:.2f} seconds...")
+                time.sleep(delay)
+    
+    raise RuntimeError(
+        f"Failed to get structured generation after {LLMConfig.MAX_RETRIES} attempts. "
+        f"Last error: {last_exception}"
+    )
 
 
 ## Function
