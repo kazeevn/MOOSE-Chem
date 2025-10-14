@@ -5,15 +5,28 @@ import pandas as pd
 from google.genai import types
 from pydantic import BaseModel, Field
 
+# Import configuration
+try:
+    from config import (
+        llm_config, hypothesis_config, prompt_config,
+        validate_temperature, validate_api_type,
+        get_max_completion_tokens, calculate_retry_delay
+    )
+except ImportError:
+    # Fallback for when running from different directory
+    import sys
+    import os
+    sys.path.insert(0, os.path.dirname(__file__))
+    from config import (
+        llm_config, hypothesis_config, prompt_config,
+        validate_temperature, validate_api_type,
+        get_max_completion_tokens, calculate_retry_delay
+    )
 
-DISCIPLINE = "AI for Materials Science"
-# MUTATION_CUSTOM_GUIDE: is added to the prompt to mutate to a novel combination (hypothesis) between research background and an inspiration
-MUTATION_CUSTOM_GUIDE = "You should be careful on adopting ML methods as the novel content of the mutation, since currently we are using ML examples to illustrate the derivation of hypothesis from research background and inspirations, and now it seems that the ML concepts can therefore easily be abused. "
-# HYPTHESIS_GENERATION_CUSTOM_GUIDE: is added to every prompt involving hypothesis generation
-HYPTHESIS_GENERATION_CUSTOM_GUIDE = '''
-Please formulate a detailed, valid, feasible, novel, and constructive hypothesis, primarily emphasizing the methodology and mechanistic design. Each step in your hypothesis should be clear, precise, and free from ambiguity. The expected performance or potential impact of the hypothesis is not the main focus and should be mentioned minimally.
-The generated hypothesis must not exceed 600 words, but it can be shorter if conciseness doesn't sacrifice essential details (normally 600 words should be more than enough to describe the essential idea and essential details of a hypothesis). The hypothesis must remain concise yet comprehensive, clearly describing all essential aspects of data representation, model architecture and training, while avoiding unnecessary verbosity or redundant explanations of common scientific knowledge. If your initial hypothesis exceeds 600 words, try to compress it until it meets this constraint without omitting any critical information.
-'''
+# Legacy constants for backwards compatibility
+DISCIPLINE = hypothesis_config.DISCIPLINE
+MUTATION_CUSTOM_GUIDE = hypothesis_config.MUTATION_CUSTOM_GUIDE
+HYPTHESIS_GENERATION_CUSTOM_GUIDE = hypothesis_config.HYPOTHESIS_GENERATION_CUSTOM_GUIDE
 
 
 # A collection of prompts for different modules
@@ -476,52 +489,10 @@ def load_coarse_grained_hypotheses(coarse_grained_hypotheses_path):
     return coarse_grained_hypotheses
 
 
-# LLM Configuration
-class LLMConfig:
-    """Configuration for LLM API calls."""
-    # Maximum completion tokens based on model type
-    MAX_COMPLETION_TOKENS_CLAUDE_HAIKU = 4096
-    MAX_COMPLETION_TOKENS_DEFAULT = 8192
-    
-    # Retry configuration
-    MAX_RETRIES = 3
-    INITIAL_RETRY_DELAY = 0.5  # seconds
-    MAX_RETRY_DELAY = 5.0  # seconds
-    BACKOFF_MULTIPLIER = 2.0
-    
-    # API types
-    API_TYPE_OPENAI = 0
-    API_TYPE_AZURE = 1
-    API_TYPE_GOOGLE = 2
-
-
-def _get_max_completion_tokens(model_name: str) -> int:
-    """
-    Determine max completion tokens based on model name.
-    
-    Args:
-        model_name: Name of the model
-        
-    Returns:
-        Maximum completion tokens for the model
-    """
-    if "claude-3-haiku" in model_name:
-        return LLMConfig.MAX_COMPLETION_TOKENS_CLAUDE_HAIKU
-    return LLMConfig.MAX_COMPLETION_TOKENS_DEFAULT
-
-
-def _calculate_retry_delay(trial: int) -> float:
-    """
-    Calculate exponential backoff delay for retries.
-    
-    Args:
-        trial: Current trial number (0-indexed)
-        
-    Returns:
-        Delay in seconds
-    """
-    delay = LLMConfig.INITIAL_RETRY_DELAY * (LLMConfig.BACKOFF_MULTIPLIER ** trial)
-    return min(delay, LLMConfig.MAX_RETRY_DELAY)
+# Legacy aliases for backwards compatibility
+LLMConfig = llm_config
+_get_max_completion_tokens = get_max_completion_tokens
+_calculate_retry_delay = calculate_retry_delay
 
 
 def llm_generation(prompt, model_name, client, temperature=1., api_type=0):
@@ -548,27 +519,26 @@ def llm_generation(prompt, model_name, client, temperature=1., api_type=0):
         raise ValueError(f"Invalid prompt: must be a non-empty string, got {type(prompt)}")
     if not model_name:
         raise ValueError("model_name cannot be empty")
-    if not (0 <= temperature <= 2):
-        raise ValueError(f"temperature must be between 0 and 2, got {temperature}")
+    validate_temperature(temperature)
     
-    max_completion_tokens = _get_max_completion_tokens(model_name)
+    max_completion_tokens = get_max_completion_tokens(model_name)
     
     # Retry loop with exponential backoff
     last_exception = None
-    for cur_trial in range(LLMConfig.MAX_RETRIES):
+    for cur_trial in range(llm_config.MAX_RETRIES):
         try:
-            if api_type in [LLMConfig.API_TYPE_OPENAI, LLMConfig.API_TYPE_AZURE]:
+            if api_type in [llm_config.API_TYPE_OPENAI, llm_config.API_TYPE_AZURE]:
                 completion = client.chat.completions.create(
                     model=model_name,
                     temperature=temperature,
                     max_completion_tokens=max_completion_tokens,
                     messages=[
-                        {"role": "system", "content": "You are a helpful assistant."},
+                        {"role": "system", "content": llm_config.DEFAULT_SYSTEM_PROMPT},
                         {"role": "user", "content": prompt}
                     ]
                 )
                 generation = completion.choices[0].message.content.strip()
-            elif api_type == LLMConfig.API_TYPE_GOOGLE:
+            elif api_type == llm_config.API_TYPE_GOOGLE:
                 response = client.models.generate_content(
                     model=model_name,
                     contents=prompt,
@@ -588,17 +558,17 @@ def llm_generation(prompt, model_name, client, temperature=1., api_type=0):
             
         except Exception as e:
             last_exception = e
-            print(f"API Error on attempt {cur_trial + 1}/{LLMConfig.MAX_RETRIES}: {e}")
+            print(f"API Error on attempt {cur_trial + 1}/{llm_config.MAX_RETRIES}: {e}")
             
             # Don't sleep on last retry
-            if cur_trial < LLMConfig.MAX_RETRIES - 1:
-                delay = _calculate_retry_delay(cur_trial)
+            if cur_trial < llm_config.MAX_RETRIES - 1:
+                delay = calculate_retry_delay(cur_trial)
                 print(f"Retrying in {delay:.2f} seconds...")
                 time.sleep(delay)
     
     # All retries failed
     raise Exception(
-        f"Failed to get generation after {LLMConfig.MAX_RETRIES} attempts. "
+        f"Failed to get generation after {llm_config.MAX_RETRIES} attempts. "
         f"Last error: {last_exception}"
     )
 
@@ -653,7 +623,7 @@ def get_structured_generation_from_raw_generation_by_llm(gene, template, client,
     )
     
     # Retry loop with temperature adjustment
-    max_trials = 10
+    max_trials = prompt_config.MAX_PROMPT_FORMAT_RETRIES
     current_temperature = temperature
     last_exception = None
     
@@ -674,8 +644,11 @@ def get_structured_generation_from_raw_generation_by_llm(gene, template, client,
         except Exception as e:
             last_exception = e
             # Increase temperature to encourage more varied attempts
-            if current_temperature < 2.0:
-                current_temperature = min(current_temperature + 0.25, 2.0)
+            if current_temperature < prompt_config.MAX_PROMPT_RETRY_TEMPERATURE:
+                current_temperature = min(
+                    current_temperature + prompt_config.PROMPT_RETRY_TEMPERATURE_INCREMENT,
+                    prompt_config.MAX_PROMPT_RETRY_TEMPERATURE
+                )
             
             print(f"Restructuring attempt {cur_trial + 1}/{max_trials} failed: {repr(e)}")
             print(f"Template: {template}")
@@ -750,10 +723,9 @@ def llm_generation_structured(prompt, model_name, client, template:BaseModel, te
         raise ValueError(f"Invalid prompt: must be a non-empty string, got {type(prompt)}")
     if not model_name:
         raise ValueError("model_name cannot be empty")
-    if not (0 <= temperature <= 2):
-        raise ValueError(f"temperature must be between 0 and 2, got {temperature}")
+    validate_temperature(temperature)
     
-    max_completion_tokens = _get_max_completion_tokens(model_name)
+    max_completion_tokens = get_max_completion_tokens(model_name)
 
     # Determine which response model to use based on template
     if not issubclass(template, BaseModel):
@@ -771,18 +743,16 @@ def llm_generation_structured(prompt, model_name, client, template:BaseModel, te
 
     # Retry loop with exponential backoff
     last_exception = None
-    for cur_trial in range(LLMConfig.MAX_RETRIES):
+    for cur_trial in range(llm_config.MAX_RETRIES):
         try:
-            if api_type in [LLMConfig.API_TYPE_OPENAI, LLMConfig.API_TYPE_AZURE]:
+            if api_type in [llm_config.API_TYPE_OPENAI, llm_config.API_TYPE_AZURE]:
                 # Use the beta structured outputs API
                 completion = client.beta.chat.completions.parse(
                     model=model_name,
                     temperature=temperature,
                     max_completion_tokens=max_completion_tokens,
                     messages=[
-                        {"role": "system", "content":
-                                 "You are a helpful and knowledgeable scientist. "
-                                 "Provide your response in the exact format requested."},
+                        {"role": "system", "content": llm_config.SCIENTIST_SYSTEM_PROMPT},
                         {"role": "user", "content": prompt}
                     ],
                     response_format=response_format
@@ -812,16 +782,16 @@ def llm_generation_structured(prompt, model_name, client, template:BaseModel, te
                 
         except Exception as e:
             last_exception = e
-            print(f"Structured generation attempt {cur_trial + 1}/{LLMConfig.MAX_RETRIES} failed: {e}")
+            print(f"Structured generation attempt {cur_trial + 1}/{llm_config.MAX_RETRIES} failed: {e}")
             
             # Don't sleep on last retry
-            if cur_trial < LLMConfig.MAX_RETRIES - 1:
-                delay = _calculate_retry_delay(cur_trial)
+            if cur_trial < llm_config.MAX_RETRIES - 1:
+                delay = calculate_retry_delay(cur_trial)
                 print(f"Retrying in {delay:.2f} seconds...")
                 time.sleep(delay)
     
     raise RuntimeError(
-        f"Failed to get structured generation after {LLMConfig.MAX_RETRIES} attempts. "
+        f"Failed to get structured generation after {llm_config.MAX_RETRIES} attempts. "
         f"Last error: {last_exception}"
     )
 

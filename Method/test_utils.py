@@ -11,16 +11,23 @@ Tests cover:
 import unittest
 from unittest.mock import Mock, patch, MagicMock
 import time
+from config import (
+    llm_config,
+    get_max_completion_tokens,
+    calculate_retry_delay,
+)
 from utils import (
-    LLMConfig,
-    _get_max_completion_tokens,
-    _calculate_retry_delay,
     llm_generation,
     llm_generation_structured,
     HypothesisResponse,
     RefinedHypothesisResponse,
     EvaluationResponse,
 )
+
+# Alias for backwards compatibility with tests
+LLMConfig = llm_config
+_get_max_completion_tokens = get_max_completion_tokens
+_calculate_retry_delay = calculate_retry_delay
 
 
 class TestLLMConfig(unittest.TestCase):
