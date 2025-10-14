@@ -71,17 +71,17 @@ class Screening(object):
                 print("Screening Round: {}; len(screen_results): {}".format(cur_screen_round, len(screen_results)))
                 # ratio_hit: [ratio_hit_in_top1, ratio_hit_in_top3]
                 # when using custom_rq, we don't know the groundtruth insp to check ratio hit
-                if self.custom_rq == None:
+                if self.custom_rq is None:
                     ratio_hit = self.check_how_many_hit_groundtruth_insp(cur_bkg_q, screen_results)
                 if cur_screen_round == 0:
                     assert cur_bkg_q not in Dict_bkg_q_2_screen_results
                     assert cur_bkg_q not in Dict_bkg_q_2_ratio_hit
                     Dict_bkg_q_2_screen_results[cur_bkg_q] = [screen_results]
-                    if self.custom_rq == None:
+                    if self.custom_rq is None:
                         Dict_bkg_q_2_ratio_hit[cur_bkg_q] = [ratio_hit]
                 else:
                     Dict_bkg_q_2_screen_results[cur_bkg_q].append(screen_results)
-                    if self.custom_rq == None:
+                    if self.custom_rq is None:
                         Dict_bkg_q_2_ratio_hit[cur_bkg_q].append(ratio_hit)
                 
         # organize raw inspirations
@@ -110,7 +110,7 @@ class Screening(object):
     #   next_round_inspiration_candidates: [[title, abstract], [title, abstract], ...]
     def one_round_screening(self, bkg_research_question, inspiration_candidates=None):
         # when self.custom_rq is not None, we don't need to check this (and also we won't initialize self.dict_bkg2insp)
-        if self.custom_rq == None:
+        if self.custom_rq is None:
             assert bkg_research_question in self.dict_bkg2insp
         # backgroud_survey
         backgroud_survey = self.dict_bkg2survey[bkg_research_question]
@@ -213,19 +213,19 @@ def main():
     parser.add_argument("--api_type", type=int, default=1, help="0: openai's API toolkit; 1: azure's API toolkit")
     parser.add_argument("--api_key", type=str, default="")
     parser.add_argument("--base_url", type=str, default="https://api.claudeshop.top/v1", help="base url for the API")
-    parser.add_argument("--num_screening_window_size", type=int, default=10, help="how many abstract we use in a single inference of llm to screen inspiration candidates")
-    parser.add_argument("--num_screening_keep_size", type=int, default=3, help="how many abstract we keep during one screening window")
+    parser.add_argument("--num_screening_window_size", type=int, default=10, help="How many abstract to use in a single inference of LLM to screen the inspiration candidates")
+    parser.add_argument("--num_screening_keep_size", type=int, default=3, help="How many abstract to keep during one screening window")
     parser.add_argument("--chem_annotation_path", type=str, default="./chem_research_2024.xlsx")
     parser.add_argument("--if_use_strict_survey_question", type=int, default=1, help="whether to use the strict version of background survey and background question. strict version means the background should not have any close information to inspirations and the hypothesis, even if the close information is a commonly used method in that particular background question domain.")
     parser.add_argument("--custom_research_background_path", type=str, default="", help="the path to the research background file. The format is [research question, background survey], and saved in a json file. ")
     parser.add_argument("--custom_inspiration_corpus_path", type=str, default="", help="store title and abstract of the inspiration corpus; Should be a json file in a format of [[title, abstract], ...]; It will be automatically assigned with a default value if it is not assigned by users. The default value is './Data/Inspiration_Corpus_{}.json'.format(args.corpus_size). (The default value is the groundtruth inspiration papers for the Tomato-Chem Benchmark and random high-quality papers)")
-    parser.add_argument("--background_question_id", type=int, default=-1, help="the background question id in background literatures. Since running for one background costs enough api callings, we only run for one background question at a time.")
+    parser.add_argument("--background_question_id", type=int, default=-1, help="The background question id in background literatures. Since running for one background costs enough api callings, we only run for one background question at a time.")
     parser.add_argument("--output_dir", type=str, default="~/Checkpoints/test.json")
-    parser.add_argument("--if_save", type=int, default=0, help="whether save screening results")
+    parser.add_argument("--if_save", type=int, default=0, help="Whether save screening results")
     parser.add_argument("--if_select_based_on_similarity", type=int, default=0, help="whether select based on similarity; 0: select based on potential as inspirations; 1: select based on semantical similarity")
-    parser.add_argument("--if_use_background_survey", type=int, default=1, help="whether use background survey. 0: not use (replace the survey as 'Survey not provided. Please overlook the survey.'); 1: use")
+    parser.add_argument("--if_use_background_survey", type=int, default=1, help="Whether to use background survey. 0: not use (replace the survey as 'Survey not provided. Please overlook the survey.'); 1: use")
     parser.add_argument("--num_round_of_screening", type=int, default=1, help="how many rounds of screening we use. For each round, we use the selected inspirations from the previous round to screen the next round.")
-    parser.add_argument("--corpus_size", type=int, default=300, help="the number of total inspiration (paper) corpus (both groundtruth insp papers and non-groundtruth insp papers)")
+    parser.add_argument("--corpus_size", type=int, default=300, help="The number of total inspirations (paper) corpus (both groundtruth insp papers and non-groundtruth insp papers)")
     args = parser.parse_args()
 
     assert args.api_type in [0, 1, 2]
