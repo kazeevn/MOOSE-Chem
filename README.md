@@ -1,18 +1,10 @@
-# MOOSE-Chem: Large Language Models for Rediscovering Unseen Chemistry Scientific Hypotheses
-
-
-
-<!-- <a href="https://hits.seeyoufarm.com"><img src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2FZonglinY%2FMOOSE-Chem&count_bg=%2379C83D&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=hits&edge_flat=false"/></a> -->
-[![Twitter](https://img.shields.io/twitter/url/https/twitter.com/cloudposse.svg?style=social&label=Follow%20%40Us)](https://x.com/Yang_zy223)
-[![GitHub Repo stars](https://img.shields.io/github/stars/ZonglinY/MOOSE-Chem%20)](https://github.com/ZonglinY/MOOSE-Chem)
-[![arXiv](https://img.shields.io/badge/arXiv-b31b1b.svg)](https://arxiv.org/abs/2410.07076)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-We introduce **MOOSE-Chem**, which is an LLM-based multi-agent framework for automated chemistry scientific hypothesis discovery. 
-
-With only LLMs with training data up to October 2023, it has rediscovered many chemistry hypotheses published on Nature, Science, or similar levels in 2024 (also only available online in 2024) with very high similarity, covering the main innovations.
-
-
+# MOOSE-Chem: Large Language Models for Rediscovering Unseen Scientific Hypotheses
+A fork of **MOOSE-Chem**, an LLM-based multi-agent framework for automated chemistry scientific hypothesis discovery. Main differences:
+1. A command-line interface that does not involve commenting/uncommenting script lines
+2. Download inspirations as references of a specific paper using Semantic Scholar and arXiv API
+3. Switched to OpenAI's structured output format from manual parsing
+4. Switched the default example to the [WyFormer paper](https://arxiv.org/abs/2503.02407)
+5. Switched the hardcoded prompt templates from chemistry to ML for material science
 
 <p align="center" width="100%">
   <img src="./Resources/main_figure_io_insp_corpus.png" alt="MOOSE-Chem" style="width: 75%; display: block; margin: auto;"></a>
@@ -45,25 +37,22 @@ The commands for the three stages are introduced after the "quick start".
 ## ⚡ Step 0: Quick Start
 
 ```bash
-git clone https://github.com/ZonglinY/MOOSE-Chem.git
+git clone https://github.com/kazeevn/MOOSE-Chem.git
 cd MOOSE-Chem
 conda create -n msc python=3.10
 conda activate msc
 pip install -r requirements.txt
 ```
-
-Then, open `main.sh` and configure the following parameters:
-
-* `api_type`
+Open `.env` and configure:
+* `api_type` - `0` if you're using an OpenAI API key, `1` if you're using an Azure OpenAI API key.
 * `api_key`
 * `base_url`
+
+Then, open `main.sh` and configure the following parameters:
 * `model_name_insp_retrieval`
 * `model_name_gene`
 * `model_name_eval`
 
-> 🔧 **Note:**
-> Set `api_type` to `0` if you're using an OpenAI API key, and to `1` if you're using an Azure OpenAI API key.
->
 > 💡 **Tip:**
 > You can assign the same model name to all three tasks (`model_name_insp_retrieval`, `model_name_gene`, and `model_name_eval`).
 
@@ -93,24 +82,11 @@ bash main.sh --help
 > 💡 **Quick Start Tip:**
 > For most users, simply run `bash main.sh all` to execute the complete pipeline (steps 3-6).
 
-### 📝 Migration from Old Approach
-
-**Before (manual editing required):**
-- Edit `main.sh` to comment/uncomment specific Python commands
-- Risk of syntax errors from manual editing
-- Difficult to run partial workflows
-
-**Now (command-line driven):**
-- Clean command-line interface
-- No manual code editing required  
-- Easy to run individual steps or full pipeline
-- Built-in help and error handling
-
 ---
 
 ## 📋 Step 1: (Optional) Provide Custom Research Background — or Use the Default Benchmark
 
-You can supply your own `research_question` and `background_survey` as input. Otherwise, the system will use a built-in benchmark.
+You can supply your own `research_question` and `background_survey` as input. Otherwise, the system will use WyFormer.
 
 #### To provide custom input:
 
