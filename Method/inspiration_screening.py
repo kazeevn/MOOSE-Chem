@@ -73,7 +73,7 @@ class Screening(object):
         for cur_bkg_q_id, cur_bkg_q in enumerate(full_bkg_questions):
             if self.args.background_question_id not in (-1, cur_bkg_q_id):
                 continue
-            print("\nID: {}; bkg_q: {}".format(cur_bkg_q_id, cur_bkg_q))
+            print(f"\nID: {cur_bkg_q_id}; bkg_q: {cur_bkg_q}")
             # screen_results for multiple rounds
             for cur_screen_round in range(self.args.num_round_of_screening):
                 if cur_screen_round == 0:
@@ -81,7 +81,7 @@ class Screening(object):
                     cur_next_round_inspiration_candidates = self.title_abstract_collector
                 print(f"\nScreening Round: {cur_screen_round}; Number of inspiration candidates: {len(cur_next_round_inspiration_candidates)}")
                 screen_results, cur_next_round_inspiration_candidates = self.one_round_screening(cur_bkg_q, cur_next_round_inspiration_candidates)
-                print("Screening Round: {}; len(screen_results): {}".format(cur_screen_round, len(screen_results)))
+                print(f"Screening Round: {cur_screen_round}; len(screen_results): {len(screen_results)}")
                 # ratio_hit: [ratio_hit_in_top1, ratio_hit_in_top3]
                 # when using custom_rq, we don't know the groundtruth insp to check ratio hit
                 if self.custom_rq is None:
@@ -146,7 +146,7 @@ class Screening(object):
         end_id = min(start_id + self.args.num_screening_window_size, len(inspiration_candidates))
         # begin screening loop
         while start_id < len(inspiration_candidates):
-            print("start_id: {}; end_id: {}".format(start_id, end_id))
+            print(f"start_id: {start_id}; end_id: {end_id}")
             # select title_abstract pairs for screening
             cur_title_abstract_pairs = inspiration_candidates[start_id:end_id]
             if len(cur_title_abstract_pairs) > self.args.num_screening_keep_size:
@@ -223,7 +223,7 @@ class Screening(object):
         # ratio_hit_in_top1 & ratio_hit_in_top3
         ratio_hit_in_top1 = hit_in_top1 / len(gdth_insp)
         ratio_hit_in_top3 = hit_in_top3 / len(gdth_insp)
-        print("len(gdth_insp): {}; len(all_extracted_titles): {}; ratio_hit_in_top1: {}; ratio_hit_in_top3: {}".format(len(gdth_insp), len(all_extracted_titles), ratio_hit_in_top1, ratio_hit_in_top3))
+        print(f"len(gdth_insp): {len(gdth_insp)}; len(all_extracted_titles): {len(all_extracted_titles)}; ratio_hit_in_top1: {ratio_hit_in_top1}; ratio_hit_in_top3: {ratio_hit_in_top3}")
         return [ratio_hit_in_top1, ratio_hit_in_top3]
 
 
@@ -266,7 +266,7 @@ def main():
         custom_rq, custom_bs = None, None
         print("Using the research background in the Tomato-Chem benchmark.")
     else:
-        assert os.path.exists(args.custom_research_background_path), "The research background file does not exist: {}".format(args.custom_research_background_path)
+        assert os.path.exists(args.custom_research_background_path), f"The research background file does not exist: {args.custom_research_background_path}"
         with open(args.custom_research_background_path, 'r') as f:
             research_background = json.load(f)
         # research_background: [research question, background survey]
@@ -274,15 +274,15 @@ def main():
         assert isinstance(research_background[0], str) and isinstance(research_background[1], str)
         custom_rq = research_background[0]
         custom_bs = research_background[1]
-        print("Using custom research background. \nResearch question: \n{}; \n\nBackground survey: \n{}".format(custom_rq, custom_bs))
+        print(f"Using custom research background. \nResearch question: \n{custom_rq}; \n\nBackground survey: \n{custom_bs}")
 
     ## change inspiration corpus path to the default corpus if it is not assigned by users
     if args.custom_inspiration_corpus_path.strip() == "":
-        args.custom_inspiration_corpus_path = './Data/Inspiration_Corpus_{}.json'.format(args.corpus_size)
-        print("Using the default inspiration corpus: {}".format(args.custom_inspiration_corpus_path))
+        args.custom_inspiration_corpus_path = f'./Data/Inspiration_Corpus_{args.corpus_size}.json'
+        print(f"Using the default inspiration corpus: {args.custom_inspiration_corpus_path}")
     else:
-        assert os.path.exists(args.custom_inspiration_corpus_path), "The inspiration corpus file does not exist: {}".format(args.custom_inspiration_corpus_path)
-        print("Using custom inspiration corpus: {}".format(args.custom_inspiration_corpus_path))
+        assert os.path.exists(args.custom_inspiration_corpus_path), f"The inspiration corpus file does not exist: {args.custom_inspiration_corpus_path}"
+        print(f"Using custom inspiration corpus: {args.custom_inspiration_corpus_path}")
 
     print("args: ", args)
 

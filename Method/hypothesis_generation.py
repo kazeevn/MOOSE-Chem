@@ -1,11 +1,9 @@
-from ast import Not
-from multiprocessing import Value
 import os, sys, argparse, json, time, copy, math, builtins
 import numpy as np
 from openai import OpenAI, AzureOpenAI
 from google import genai
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from Method.utils import load_chem_annotation, load_dict_title_2_abstract, load_found_inspirations, get_item_from_dict_with_very_similar_but_not_exact_key, instruction_prompts, llm_generation, llm_generation_structured, pick_score, recover_generated_title_to_exact_version_of_title, load_groundtruth_inspirations_as_screened_inspirations, exchange_order_in_list
+from Method.utils import load_chem_annotation, load_dict_title_2_abstract, load_found_inspirations, get_item_from_dict_with_very_similar_but_not_exact_key, instruction_prompts, llm_generation, llm_generation_structured, recover_generated_title_to_exact_version_of_title, load_groundtruth_inspirations_as_screened_inspirations, exchange_order_in_list
 from Method.logging_utils import setup_logger
 
 
@@ -167,8 +165,8 @@ class HypothesisGenerationEA(object):
         # this function is at least used for the second layer of nodes
         assert step_id >= 2
         # this_recom_mutation_id = "inter_recom" if step_id == 2 else "inter_recom_{}".format(step_id-1)
-        this_recom_mutation_id = "inter_recom_{}".format(step_id-1)
-        print("\n\nInter-EA Step: {}".format(step_id))
+        this_recom_mutation_id = f"inter_recom_{step_id - 1}"
+        print(f"\n\nInter-EA Step: {step_id}")
         ## get filtered_ranked_top_insp_list (filter based on recom_inspiration_ids_user_input or args.recom_num_beam_size)
         # filtered_ranked_top_insp_list: [[core_insp_id, hypothesis, hypothesis_score, [mutation_id], ave_score], ...]; used to determine which nodes to further expand / explore
         if -1 in recom_inspiration_ids_user_input:
