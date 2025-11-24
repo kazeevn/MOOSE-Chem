@@ -1,0 +1,677 @@
+Hypothesis ID: 0
+Averaged Score: 4.25; Scores: [4, 4, 4, 5]
+Number of rounds: 2
+We hypothesize that a generative modeling framework integrating comprehensive group-theoretic canonicalization, hierarchical multi-modal architecture, and targeted rare-symmetry augmentation will enable faithful reproduction of symmetry space group distributions in crystalline materials, outperforming previous methods in stability, uniqueness, and novelty of generated structures.
+
+**Methodology:**
+
+1. **Group-Theoretic Canonicalization & Data Encoding:**
+   - For each crystal, enumerate all valid group–maximal-subgroup–Wyckoff position chains using spglib and exhaustive custom algorithms. Represent each chain by integer and one-hot tokens: space group, full subgroup chain, Wyckoff letters, atomic species, and site parameters (binned at 0.05 fractional units).
+   - Isomorphism checks (via canonical structure graph hashing) deduplicate entries; for ambiguous or polymorphic cases, every valid chain is recorded, with chain choice prioritized by subgroup length then lexicographic Wyckoff sequence.
+
+2. **Rare Symmetry Class Augmentation:**
+   - Adapt morphological SMOTE: map discrete group/chain classes to a learned embedding (via contrastive or supervised metric learning), interpolate between rare-class vectors in latent space, project results back to valid space group/subgroup/Wyckoff tuples using group-theoretical rules, and rigorously filter non-physical instances.
+   - Augment further via group/subgroup lowering, atomic ordering permutations, and synthetic site parameter variations within physical constraints.
+
+3. **Edge Case and Uncertain Site Handling:**
+   - For partially occupied or mixed Wyckoff positions, encode tokens with a learned uncertainty prior; probabilistic masking distributes generative probability mass across all admissible occupancies. User-configurable filters control strictness for ambiguous entries.
+
+4. **Model Architecture:**
+   - Hierarchical autoregressive transformer stack: (i) group/subgroup transformer (global context); (ii) set-equivariant transformer (Wyckoff/site permutation invariance); (iii) atomic/species/position decoder. At each layer, dynamic masking is enforced based on group/chain/chemical logic.
+   - All hyperparameters, masking protocols, and selection policies are transparently reported and released.
+
+5. **Training, Validation, and Reproducibility:**
+   - Datasets (e.g., MP-20) are split via structure-based clustering. Validation checks include (a) space group distribution fidelity, (b) uniqueness/novelty (crystal graph isomorphism tests within resource limits), and (c) stability (ensemble property surrogate models with error quantification).
+   - Full pipeline (data, code, parameter configs, pre-trained models) is released under an open license. Resource usage (GPU/CPU memory, run time) is reported for each protocol.
+
+6. **Downstream Demonstration:**
+   - Proof-of-concept: use model for targeted generation of low-symmetry, high-functional-score candidates (e.g., for photonic or thermoelectric applications), establishing viability for AI-driven hypothesis generation in unexplored space group regimes.
+
+This comprehensive, modular design tightly integrates symmetry theory, advanced generative modeling, and explicit rare-class support, forming a foundation for next-generation, symmetry-faithful inorganic material discovery.
+
+
+Hypothesis ID: 1
+Averaged Score: 4.0; Scores: [4, 4, 3, 5]
+Number of rounds: 1
+Develop a transformer-based, autoregressive generative model for crystalline materials that explicitly enforces space group and Wyckoff position hierarchy at every generation step, targeting faithful reproduction of symmetry distributions in crystal datasets (e.g., MP-20). The methodology comprises:
+
+1. Data Representation and Preprocessing:
+   - Use MP-20 dataset, deduplicate by structure fingerprints, filter to only crystals with fully-determined symmetries.
+   - For each structure, extract all valid group-subgroup chains connecting the observed space group to P1 using spglib and custom Python scripts, prioritizing maximal-length chains; multi-chain structures are represented by all unique chains (each as a sample).
+   - Encode group, subgroup, and Wyckoff letters as integer indices; supplement with one-hot and, for Wyckoff/site tokens, add type/multiplicity features. Site coordinates are discretized to 0.05-unit bins; species as categorical tokens.
+   - Special handling for sites with multiple species or partial occupancy: represent as composite tokens, with masking for undefined entries.
+
+2. Data Augmentation for Scarce Symmetries:
+   - Augment rare symmetry classes and chains via random synthetic subgroup lowering, compositional variations, and SMOTE/interpolation in the Wyckoff/species embedding space.
+
+3. Validation and Splitting:
+   - Structural nearest-neighbor clustering with Tanimoto cutoff (e.g., 0.80) to assign crystals into non-overlapping train/validation/test splits, preventing structure leakage.
+
+4. Model Architecture:
+   - Three-level transformer model: (i) group prediction (input: initial token), (ii) subgroup chain prediction (input: group + chain tokens, with dynamic attention masking based on adjacencies from International Tables of Crystallography), (iii) sequential Wyckoff, site, and species prediction (inputs as above, with masking from current chain context).
+   - Dynamic masks generated at runtime by look-up in the group-subgroup adjacency tree; pseudocode, data processing, and chain traversal logic published as supplemental algorithm.
+   - Attention, layer number, and embedding width modifiable (baseline: 4 layers/128 hidden/channel, 8 heads).
+
+5. Training:
+   - AdamW optimizer, learning rate scheduling, batch size 64. Regularization via dropout (0.1) and weight decay (1e-2). Early stopping according to validation loss. Training and inference are performed autoregressively.
+
+6. Inference and Sampling:
+   - During generative sampling, use both top-k (k=10) and beam search (width=5). Samples failing to traverse valid group-subgroup chains or violating symmetry are flagged; “failure modes” cataloged for quantitative post-analysis.
+
+7. Evaluation and Analysis:
+   - Track success/failure modes, metrics on stability, uniqueness, novelty, as well as explicit symmetry match to dataset distributions. Comparative ablation on dynamic vs. static masking, encoding choice, and augmentation.
+
+This methodology establishes a protocol for symmetry- and hierarchy-preserving generative modeling, operationalizing dynamic group-theoretic constraint satisfaction at every generation step, and is extensible to other algebraic-constraint-based generative domains.
+
+
+Hypothesis ID: 2
+Averaged Score: 4.0; Scores: [5, 3, 3, 5]
+Number of rounds: 1
+We hypothesize that a rigorously defined, symmetry-aware generative model for crystal structures—built on fully deterministic group-theoretic canonicalization, exhaustive but tractable Wyckoff-site-based data augmentation, and permutation- and space-group-equivariant set-based neural architectures—can faithfully learn and reproduce the symmetry space group distribution seen in real materials, while enhancing stability, uniqueness, and novelty beyond state-of-the-art models.
+
+The hypothesis operationalizes as follows:
+1. **Canonical Wyckoff Encoding**: Each crystal structure is mapped deterministically to a canonical Wyckoff-position representation via an explicit, pseudo-coded site-canonicalization algorithm (using symmetry libraries such as spglib/pymatgen). Tie-breaking and equivalence are made fully deterministic to ensure single-representation mapping.
+2. **Deterministic Symmetry Augmentation**: For each training structure, all symmetry-equivalent Wyckoff arrangements are generated (using explicit group action pseudo-code), computationally capped for large N (>40) by prioritizing coset representatives based on group-theoretic importance or informativeness. The selected augmentation budget is justified, with fallback rules recorded.
+3. **Set-Equivariant Generative Model**: The model employs a permutation- and group-equivariant set-based neural framework (e.g., Set Transformer with explicit symmetry-aware layers), processing canonicalized Wyckoff sets. All architectural choices (layers, latent dimensions, group invariances) are stated with rationale tables and pseudo-code modules.
+4. **Property Conditioning and Transfer**: Targeted material properties are conditioned upon through auxiliary heads; property labels are preprocessed (e.g., z-score normalization, robust imputation for missing labels). Consistency between property-driven augmentation and Wyckoff/sample priors is enforced, enabling integrated transfer learning.
+5. **Edge-Case and Ambiguity Handling**: All exclusion/inclusion thresholds for ambiguous/disordered structures (e.g., minimum occupancy, mixed-site/multisite policies) are defined in an explicit edge-case flowchart, encoded as deterministic pre/post-process routines.
+6. **Validation, Novelty Mapping, and Ablations**: Uniqueness/novelty/stability are assessed using strict graph isomorphism checks (with explicit computational bounding), surrogate-trained stability predictors (CGCNN/MEGNet/MatBERT ensembles), and detailed error quantifications. A survey table benchmarks each protocol axis against prior models. Comprehensive ablations (removing or altering each pipeline component) are pre-registered to substantiate the unique value of the unified design.
+7. **Bias and Robustness Analysis**: A sensitivity analysis quantifies impacts from disordered-data filtering and augmentation cap strategies, with all protocols and codes to be open-sourced for community adoption and scrutiny.
+
+This hypothesis foregrounds methodological explicitness, modularity, reproducibility, and empirical rigor, with all algorithms, parameterizations, and edge-case policies transparently defined and justified, serving as a reproducible foundation for symmetry-driven generative modeling.
+
+
+Hypothesis ID: 3
+Averaged Score: 4.0; Scores: [5, 3, 3, 5]
+Number of rounds: 3
+We hypothesize that an end-to-end, group-theoretically canonized, legal-by-construction hierarchical generative framework leveraging rare-class augmentation and fully-automated DFT-in-the-loop validation will reproducibly generate crystalline materials with space-group and Wyckoff position distributions faithful to empirical databases, while achieving state-of-the-art uniqueness, stability, and novelty. Specifically:
+
+1. Data Representation & Canonicalization: Each crystal is encoded by exhaustive, group-theory-derived maximal subgroup–Wyckoff chains (via an extended spglib+custom enumeration library). All representations are deduplicated using a rigorous graph-based automorphism index, with stochastic tie-breaking resolved deterministically. Canonical chains prioritize maximal subgroup length and lexicographical Wyckoff sequence. Tokens include: space group (1–230, one-hot), chain, site multiplicity, Wyckoff symbol, element, fractional parameter (binned, Δx=0.05), and automorphism class.
+
+2. Legal-by-Construction Masking: At every autoregressive decoding step, mask-tensors filter out illegal Wyckoff/site choices using an exhaustive, open-source lookup-table (precomputed for all known space groups via the ITC), dynamically updated for downstream steps. Fractional occupancy and partial disorder are encoded as special-case tokens, with site assignment probabilities proportional to known physical prevalence (default priors provided).
+
+3. Rare Class Augmentation: Rare symmetry/subgroup/element-site combinations are supplemented via a calibrated, SMOTE-inspired protocol: (i) discrete classes embedded (128d vector, learned jointly); (ii) rare-sample pairs interpolated via convex combinations in latent space; (iii) samples mapped back (via ITC lookups) and physically checked for feasibility/admissibility—non-physical or redundant outputs pruned. Augmentation ratios and thresholds are tunable (default: balance within 10% per class).
+
+4. Model Architecture: A modular, three-level architecture is used: (a) symmetry-group transformer (4 layers, 512 hidden units, 8 heads), (b) site-permutation-equivariant transformer (3 layers, 320 units), (c) atom identity/parameter decoder (2 layers, 160 units). Legality masks and automorphism checks are applied at all levels. Hyperparameters (layer counts, dropout rates, batch sizes) are reported with defaults and ablation plans.
+
+5. Training Protocol: Stratified train/val/test splits (no >90% structural similarity across splits, via graph edit distance). Model selection based on explicit metrics: (i) faithfulness to empirical space-group distributions (e.g., Fréchet ChemNet Distance, entropy, KL-divergence), (ii) SOTA uniqueness/novelty via canonicalized graph isomorphism (error/ambiguity rates documented), (iii) stability (top N predictions relaxed by DFT, VASP default settings, failed jobs rerun with tighter convergence, failures flagged for retraining). All steps are open-sourced; exhaustive ablation tables provided.
+
+6. DFT-in-the-Loop Feedback: Active learning framework selects diverse, high-uncertainty candidates for DFT (default: 32/epoch, up to 128); results incrementally update stability priors and filter legal mask tables. DFT failures analyzed for error types and fed back for rare-class surrogate retraining. Auxiliary ML potentials (MatBERT, CGCNN) triage and rank candidates for DFT. API for addition of future property modules included.
+
+7. Transparency & Transfer: All code/data/protocols released. Transfer learning supported; group/chain embeddings and legality masks reusable across lattice families.
+
+This pipeline establishes a reproducible, modular, physically-grounded foundation for symmetry-faithful crystal discovery, with robust edge-case handling and clear benchmarking against all SOTA models.
+
+
+Hypothesis ID: 4
+Averaged Score: 3.75; Scores: [4, 3, 3, 5]
+Number of rounds: 1
+We propose a mechanistically explicit generative pipeline for inorganic crystal structures that achieves strict symmetry faithfulness by combining canonical Wyckoff-based encoding, legal-by-construction generation logic, and explicit automorphism marginalization. The pipeline operates as follows:
+
+1. Data Representation: 
+   - All input/output crystal structures are encoded as fixed-length tensors representing site occupancy, coordinate type (special/general), Wyckoff position, atomic species, and partial occupation if present. Canonicalization is achieved via lexicographic ordering with strict tie-breaking on site symmetry and atomic charge balancing protocols; the full mapping is deterministic and resolves all automorphism ambiguities. Reference code and lookup tables use Spglib and Pymatgen.
+   - A precomputed, group-indexed legality mask (dim: max_sites x possible Wyckoff configs x allowed atom types) is constructed for each space group, identifying all symmetry-permissible site arrangements. For groups with site counts exceeding N=12 or memory use >4GB, masks are generated dynamically step-wise; precise fallback triggers are specified in a parameter table (see Supplement I).
+
+2. Model Architecture:
+   - An E(3)-equivariant transformer with group-conditional context embedding drives sequential site placement; each step selects only legal Wyckoff-atom configurations (logits zeroed by legality mask) for the active group. Default architecture parameters: 8 layers, 512 hidden units, GELU activation, with λ-weighted loss (λ_sym, λ_uniq, λ_nov) tuned from pilot runs (defaults: 1, 2, 1).
+   - In-model automorphism marginalization is by stochastic permutation averaging on equivalent site orderings (max 5 per step). For groups/structures where automorphism enumeration exceeds 100, a capped random sample is used (Supplement II).
+   - Partial occupation and disorder are represented explicitly; disorder fractions must match compositional and symmetry constraints at each generative step.
+
+3. Training and Evaluation:
+   - Training is on the MP-20 dataset, ablated by group size, chemical family, and occupation complexity.
+   - During training and sampling, only legal-by-construction steps are permitted; no post-hoc filtering. All outputs are checked for isomorphism (Spglib), group symmetry, chemical plausibility, and uniqueness. Duplicate/isomorphic candidates trigger dynamic penalty during training.
+   - Benchmarks: Compare to DiffCSP, FlowMM, and Kim et al. 2023's symmetry-aware model; report stability, uniqueness, and per-group symmetry-matching rates.
+   - Empirical resource profiling (mask memory, automorphism averaging time), fallback activation rates, and failure analyses are included.
+
+4. Key Novelty and Claims:
+   - (a) Our pipeline uniquely guarantees, by construction, that only symmetry-faithful, unique crystals are generated for every group supported by Wyckoff tables, in contrast to SOTA which rely on post-hoc symmetry filtering.
+   - (b) Deterministic canonicalization, dynamic legality masking, and empirical mask-scaling ablations form the core experimental contributions, with all parameter/fallbacks specified.
+   - (c) At least one worked-out example is provided showing a novel, stable, symmetry-faithful material not produced by baseline models.
+
+All source code, legality tables, ablation logs, and benchmark scripts are released for open validation and extension.
+
+
+Hypothesis ID: 5
+Averaged Score: 3.75; Scores: [4, 3, 3, 5]
+Number of rounds: 2
+We hypothesize that a crystalline generative framework—rooted in fully deterministic Wyckoff-canonicalized group-theoretic encoding, explicit disorder/mixed-site heuristics, and symmetry-aware E(n)-equivariant graph generative models combined with property-conditional controls—can reproducibly generate stable, unique, and novel inorganic materials that authentically reproduce observed space group distributions and outperform prior state-of-the-art methods in symmetry fidelity and generative diversity.
+
+Methodology:
+1. **Representation & Canonicalization:** All input/outcome structures are converted to a unique, group-theoretically-canonical Wyckoff representation; sites with occupancy <10% are pruned, 10–50% sites are imputed or masked (decision tree pseudo-code provided), and all disorder is tagged with explicit flags and audit logs. Canonicalization failures trigger an automated fallback and error report routine.
+
+2. **Symmetry Data Augmentation:** For each structure, all symmetry-distinct Wyckoff representations are generated exhaustively (for N≤40 atoms), or by stratified sampling up to k_max=1000 for larger N, with the sampling focused to ensure rare symmetries are represented. All augmentation parameters (k_max, stratification criteria) are explicitly benchmarked and documented.
+
+3. **Model Architecture:** Training employs an E(n)-equivariant graph neural model with property-conditional input layers; all key hyperparameters (layer count, units, activation functions, optimizer: Adam, lr=1e-4, betas 0.9/0.99, batch size=128, early stopping on validation loss plateau ≥50 epochs) are listed in a supplementary configuration file. Ablation paths encompass (a) inclusion/exclusion of disorder handling, (b) varying augmentation caps, and (c) alternative equivariant blocks. 
+
+4. **Edge-Case Handling:** For ambiguous or mixed-occupancy sites, a reproducibility-logged fallback pipeline assigns output to manual/automated screeners based on defined thresholds. All steps generate auditable records and decision IDs. For partial/noisy data (e.g., incomplete CIFs), a separate imputation/classification preprocessor is invoked, version-logged, and error rates are tabulated across benchmarks.
+
+5. **Automorphism Marginalization & Validation:** Uniqueness and novelty are assessed through scalable, batched graph isomorphism checks (downsampling for N>40), augmented with neural isomorphism surrogates for efficiency. Novelty is quantified by both traditional metrics and the introduced "symmetry-constrained uniqueness" score; disorder handling allows for a new "disorder-resolved novelty" metric.
+
+6. **Stability Scoring:** Final candidate sets are pre-screened via an ensemble of open-source surrogate models (CGCNN, MEGNet, MatBERT, using fixed, published checkpoints), with disagreement triggering automated flagging and error analyses.
+
+7. **Benchmarking & Application Scenarios:** Reproducibility, scalability, and edge-case robustness are demonstrated on standardized datasets, with open-source artifacts and a leaderboard for community benchmarking. Two case studies (e.g., search for noncentrosymmetric ferroelectrics and high-bandgap oxides) are integrated as demonstration modules.
+
+All routines, hyperparameters, and processing thresholds are explicitly defined in algorithm boxes and config files, ensuring the protocol is unambiguous, auditable, and directly reproducible by independent researchers.
+
+
+Hypothesis ID: 6
+Averaged Score: 3.75; Scores: [5, 3, 2, 5]
+Number of rounds: 3
+We hypothesize that a two-stage, hierarchical generative modeling framework—consisting of (i) automorphism-marginalized, canonicalized Wyckoff-based crystal encodings and (ii) a property-conditional, autoregressive group-subgroup transformer—will faithfully reproduce the true symmetry group distribution and improve uniqueness, stability, and novelty relative to SOTA. The hypothesis is operationalized by the following protocol:
+
+1. Data Representation & Canonicalization:
+    (a) Crystal data are converted into group-subgroup chains and Wyckoff-site tuples. Automorphism enumeration is conducted via a combination of spglib, nauty (for graph isomorphism testing), and custom routines for lattice/site automorphisms; full pseudocode and references provided.
+    (b) Each crystal's representation is canonicalized: for crystals with multiple equivalent group-subgroup chains, lex-min ordering (on subgroup indices and Wyckoff strings) is applied. Ties are broken by comparing automorphism-induced site/lattice permutations.
+    (c) Tokenization granularity (e.g., N=20 for site parameter bins) is empirically justified using resolution convergence studies. All site multiplicities and fractional parameters are retained with a set-wise tokenization scheme. A full, worked example is supplied in supplementary material.
+    (d) Statistical logs of edge/fallback cases (e.g., ambiguous sites, defective lattices) are maintained. For each dataset, the proportion of excluded structures and fallback rates per group/class are reported.
+
+2. Model Architecture:
+    (a) A three-level transformer is constructed:
+        (i) Root group prediction;
+        (ii) Autoregressive group-subgroup chain prediction, with attention masks derived from explicit International Tables transitions;
+        (iii) Wyckoff + species/site parameter generation, conditioned on all previous steps.
+    (b) For site/element insertion, masking and pseudo-code level dynamic logic are provided for valid group-site-species transitions.
+    (c) Edge-case handling is implemented as a finite state machine: for each generative failure state (invalid chain, ill-defined site), fallback and rejection sampling protocols are codified and publicly documented.
+    (d) Multi-property conditioning is enabled via learned embeddings for target properties (e.g., bandgap, formation energy), concatenated at every hierarchical level.
+
+3. Training & Validation:
+    (a) Datasets are split by structure-based clustering to avoid data leakage. Data augmentation utilizes symmetry lowering and synthetic interpolation (e.g., vector SMOTE on symmetry class labels) for underrepresented classes.
+    (b) Training uses AdamW, cyclical learning rates, and regularization; ablation studies systematically vary chain length, embedding sizes, and binning granularity.
+    (c) All validation metrics (KL divergence for group/chain distributions, stability/novelty/uniqueness rates, and property-conditional performance) are pre-registered. Edge/fallback statistics are reported alongside main results.
+
+4. Benchmarking & Reproducibility:
+    (a) A matrix is supplied enumerating the distinguishing features of our approach versus prior SOTA (canonicalization, property conditioning, explicit edge handling, etc.), with code-level examples and formal references.
+    (b) Full pseudocode and a worked example (complex structure) tracing input to output are attached.
+    (c) All pipelines, code, and statistical logs will be openly released to facilitate external validation.
+
+Limitations (e.g., computational scaling for large unit cells) and plans for generalizability (non-periodic materials) are transparently documented.
+
+
+Hypothesis ID: 7
+Averaged Score: 3.5; Scores: [4, 3, 3, 4]
+Number of rounds: 1
+We hypothesize that a generative transformer model utilizing precise, canonicalized Wyckoff equivalence classes encoded hierarchically via space group and subgroup chains—paired with explicit, dynamical group-theoretical masking of attention—will reproduce the experimental distribution of material space groups and outperform state-of-the-art models in stability, uniqueness, and novelty.
+
+Methodology:
+
+1. Data Preprocessing & Representation:
+  a. Enumerate and canonicalize all symmetry-equivalent Wyckoff representations for each material structure using spglib and custom canonicalization rules (prioritizing maximal subgroups, lexicographic ordering). Detailed algorithmic flowchart and parameter table (including bin size, memory/time cutoffs) to be provided in main manuscript, not supplement.
+  b. Crystals with multiple valid equivalence chains are stored as separate training instances (deduplicated post-generation up to symmetry).
+  c. Encodings include: discrete one-hot group/subgroup/Wyckoff chain descriptors; positional features with empirically-justified discretized bins (e.g., ±0.05 fractional coordinates, adaptively tuned from training statistics); site/species integer encoding using a controlled vocabulary.
+
+2. Data Augmentation & Balancing:
+  a. Apply symmetry-aware augmentation: random subgroup lowering (distribution and rules stated explicitly), SMOTE or physically-constrained interpolation in symmetry vector space (clear boundaries), and over-sampling for rare symmetry classes.
+
+3. Model Architecture:
+  a. Three-tier, multimodal transformer comprising (i) space group/subgroup chain stream, (ii) Wyckoff site and species stream, (iii) auxiliary symmetry features. Dynamic group-theoretical masking and positional attention derived at each step via lookup from ITC tables and deterministic, rule-based logic (see included pseudocode/flowcharts).
+  b. All masking, memory, and computational bottlenecks are handled by explicit truncation (site/chain cutoffs) and fallback to canonical minimal encoding (triggered after N seconds or attempts, with N empirically determined and reported in parameter table).
+
+4. Training & Validation:
+  a. Rigorous splits via structure-based clustering to avoid data leakage. Batch construction is symmetry-balanced.
+  b. Loss is permutation-and symmetry-invariant (mathematically specified).
+  c. Training protocol: AdamW, cyclical LR, early stopping, batch size, dropout, regularization as fixed in parameter table.
+  d. Validation pipeline includes: (i) quantitative plausibility and symmetry checks per sample (with logging by pipeline stage), (ii) run-time and memory benchmarking, and (iii) stress-testing on edge-case (rare or ambiguous symmetry) structures.
+
+5. Ablation and Comparative Analysis:
+  a. Ablate (i) equivalence-class canonicalization, (ii) dynamic masking, (iii) augmentation. Compare each to SOTA and prior work (CrystalGAN, MatGAN, CrystalFormer, etc.), highlighting improvements in symmetry distribution, uniqueness, and novelty.
+
+6. Modularity & Extensibility:
+  a. Architecture and representation are designed to be modular, enabling drop-in replacement (e.g., for noncrystalline materials, property conditioning).
+
+All operational procedures, parameters, cutoffs, and fallback conditions will be tabulated and all core algorithms depicted via flowcharts in the main text to maximize reproducibility.
+
+
+Hypothesis ID: 8
+Averaged Score: 3.5; Scores: [4, 3, 3, 4]
+Number of rounds: 2
+We propose a modular generative framework for crystalline materials, integrating group-theoretic canonicalization, deterministic Wyckoff encoding, and multi-property conditioning within a symmetry-aware, hierarchical autoregressive model. The hypothesis consists of the following key components:
+
+1. Data Representation & Canonicalization:
+- Each crystal structure is mapped to its unique group-subgroup chain using spglib and custom scripts, prioritizing maximal subgroups and deterministic ordering rules (max chain length, then alphabetical); all alternative chains for ambiguous cases are retained as independent training samples.
+- Wyckoff positions, species, and occupancies for each site are encoded as categorical tokens, supplemented with continuous site parameters (binned to fixed precision, e.g., 0.05 fractional units). Disordered and partially occupied sites are encoded following explicit example-driven rules: sites with occupancy >0.5 retained, <0.25 removed, 0.25-0.5 included as probabilistic tokens. Canonical encoding routines are fully specified and publicly available.
+
+2. Data Augmentation:
+- Usable symmetry augmentation is achieved through exhaustive group action enumeration for N<40, switching to probabilistic sampling for larger crystals. Rare-group upweighting employs capped SMOTE-style synthetic data, regularized via frequency-aware limits to prevent bias. All augmentations are logged and reproducible.
+
+3. Model Architecture:
+- A three-tier hierarchical transformer is used: (i) group/subgroup chain transformer, (ii) Wyckoff+species transformer with dynamic, symmetry-informed attention masking (masks derived from International Tables transition graphs), and (iii) site-wise permutation-invariant SetTransformer blocks for flexible handling of site multiplicity.
+- Model configuration (e.g., d_model, depth, attention heads, dropout) is fully tabulated and justified in supplementary materials.
+
+4. Property Conditioning & Targeting:
+- Properties (e.g., formation energy, band gap) are normalized and concatenated to input tokens at every autoregressive decoding step. Missing labels are imputed via an explicit, documented process. Conditioning is multi-objective, with uncertainty-weighted loss terms for each property.
+
+5. Training & Evaluation Protocols:
+- Train/val/test splits are determined using explicit structure-based clustering to ensure uniqueness and prevent leakage, with split files published.
+- Rigorous ablation studies dissect the contribution of (a) group-theory-based masking, (b) augmentation strategies, and (c) property conditioning modules. Comparative evaluations against SOTA (DiffCSP, FlowMM, WyckoffGAN) are performed on MP-20 and OQMD.
+- Surrogate stability/novelty/uniqueness is assessed using external predictors (CGCNN, MEGNet, MatBERT), with first-principles spot-checks for random candidates. Cross-surrogate validations prevent feedback loops; surrogate architectures and train/val splits are released.
+
+6. Edge-Case & Rare Scenario Handling:
+- Explicit flowcharts detail pipeline steps for rare symmetries, disorders, and mixed-site cases. Parameter choices for thresholds (e.g., maximum chain depth, min occupancy) are evidence-based and fully listed.
+
+7. Open Science & Benchmarking:
+- All routines, splits, benchmarks, and model weights are documented and released open-source, enabling direct reproducibility and community benchmarking.
+
+This pipeline explicitly operationalizes the joint, dynamic use of group-theory-based canonicalization, deterministic Wyckoff encoding, symmetry-informed augmentation, and property-aware multi-modal generation for high-fidelity, symmetry-matched crystal structure generation, offering a new blueprint for reproducible, open, and extensible materials discovery.
+
+
+Hypothesis ID: 9
+Averaged Score: 3.5; Scores: [4, 3, 3, 4]
+Number of rounds: 2
+We hypothesize that a transformer-based, automorphism-marginalized generative framework, explicitly encoding Wyckoff position chains and group-theoretic constraints, can produce legal, unique, and symmetry-faithful inorganic crystal structures at scale, surpassing prior methods in stability, uniqueness, and symmetry distribution accuracy. 
+
+**Data Preparation:**
+- Source: Materials Project, ICSD, OQMD (explicitly cited, with version/date), filtered for 3D crystalline materials, de-duplicated with spglib symmetry analysis.
+- Each structure is featurized as: (a) space group number; (b) group–subgroup chain (maximal chains with canonical ordering, rule: longest–alphabetical tie-break); (c) Wyckoff position sequence with exact site multiplicities, one-hots, and physically binned (0.05 fractional unit) coordinates; (d) species assignments encoded as one-hots and oxidation states.
+- Augmentation: (i) Symmetry-based subgroup lowering, applied only to unique chains not in training data; (ii) SMOTE oversampling restricted to symmetry number, composition vectors, and Wyckoff occupancy—physically invalid SMOTE candidates are filtered by fast surrogate plausibility models (CGCNN with explicit >0.5 eV/atom cutoff).
+
+**Automorphism Marginalization & Uniqueness:**
+- For each crystal, all valid Wyckoff encoding automorphisms are enumerated (precomputed tables), but only the canonical representative (rule: lex least per space group action) is retained for training, guaranteeing dataset-level uniqueness. During generation, candidate duplicates are detected as per group-theoretic isomorphism, and only unique structures advanced.
+
+**Model Architecture:**
+- Three-tier transformer: (1) Group/subgroup chain module (masked self-attention, dynamic masking from International Tables rules); (2) Wyckoff-position & coordinate decoder (stepwise, legality-constrained output mask at each step informed by current group/subgroup context); (3) Species decoder, with cross-attention to site/position features.
+- Tunable hyperparameters (summarized in Table 1): transformer depth {6, 9, 12}, embedding dim {256–768}, learning rate {1e-4–5e-5}, dropout {0.1–0.3}, batch {32, 64, 128}, regularization {L2, weight decay}, early stopping patience {5, 10 epochs}.
+- Data splitting: Structure-based nearest-neighbor clustering to enforce strict non-overlap of structural motifs across train/val/test.
+- Training: AdamW optimizer, cyclical learning rate schedule, explicit ablation for masking/augmentation effects.
+
+**Generation & Validation:**
+- Sampling: Top-k, nucleus sampling, or beam-search over legality-mask-restricted candidates.
+- Fallback: If a generative path resolves to an illegal Wyckoff configuration, revert to prior group node and resample; fallback statistics tracked and reported (target: <2% path rejections per 10k samples).
+- Plausibility filters: Explicit charge neutrality (oxidation-state-based, per predefined element rules), minimum interatomic distances (default 1.5 Å, species pairwise table adjustable), and fast surrogate energy screening (CGCNN, <0.5 eV/atom cutoff).
+- Metrics: Symmetry KL-divergence, uniqueness fraction (via spglib+isomorphism checks), fraction of DFT- or surrogate-stable structures, time/resource usage per 1k samples.
+
+**Comparative Analysis:**
+- Direct comparison tables and failure case flowcharts are provided against WyCryst and CrystalFormer; counterexample scenarios (e.g., ambiguous Wyckoff assignments, misassigned subsymmetries) are used to demonstrate superiority of the automorphism-marginalized, legality-restricted approach.
+
+**Broader Impact Statement:**
+- The pipeline establishes a legal-by-design, automorphism-unique generative protocol applicable to both high-throughput crystal discovery and clean database augmentation, with clear extension to screening rare symmetries and de-duplication. Limitations (e.g., potential bias towards well-represented space groups) and generalization potential (to molecular crystals/organic frameworks) are transparently discussed.
+
+
+Hypothesis ID: 10
+Averaged Score: 3.5; Scores: [4, 3, 3, 4]
+Number of rounds: 3
+We propose a generative framework for crystalline materials that combines canonical, lossless Wyckoff-position-based representation with transformer-based autoregressive sequence modeling, providing legal-by-construction generation faithful to the ground-truth distribution of space group symmetries. The methodology is fully specified as follows:
+
+1. **Data Representation and Canonicalization**: All structures are expressed as sequences: (space group index, ordered canonical Wyckoff positions, species, site occupancies). For each input, a group-theoretic canonicalization routine (via spglib) ensures a unique, lossless representation. Automorphism classes of each space group are pre-tabulated; ambiguity cases (multiple Wyckoff representations) are resolved by a sorting and equivalence-checking protocol. Code, canonicalization scripts, and test cases are versioned and provided.
+
+2. **Architecture**: An autoregressive transformer (e.g., 6 layers, model dimension 512, max sequence length 20) is conditioned on explicit property vectors (user-specified or dataset-derived), normalized in [-1,1] and concatenated with positional embeddings. At each decoding step, dynamic legality masks (precomputed/cached for efficiency) are applied based on partial sequences and group-theoretic constraints, excluding illegal continuations in real time.
+
+3. **Stepwise Automorphism Marginalization**: During sequence generation, probabilities are dynamically marginalized over all automorphism-equivalent Wyckoff sequences for the current partial structure. For each candidate addition, automorphism lookup tables (built per space group) are used, ensuring only canonical, unique representatives are sampled. Parallelization and result caching address computational overhead; per-space-group stats (N_equiv) and operation timings are reported.
+
+4. **Legal-by-Design and Robustness**: All generated structures are legal by construction; illegal or ambiguous sequences trigger fallback heuristics. For bottleneck or edge-case space groups, reduced sequence proposal sets or surrogate legality validators (trained lightweight ML classifiers) are activated per predefined rules.
+
+5. **Validation, Benchmarking, and Reproducibility**:
+- Validation proceeds via: (i) DFT (standardized settings; e.g., VASP, GGA-PBE, k-mesh 4x4x4) on top-N (e.g., 1000) stable candidates per epoch; (ii) scalable surrogate models for rapid prescreening.
+- Datasets: Defined scripts for Materials Project, OQMD, and a symmetry-stratified custom benchmark, provided with DOI/versioned releases.
+- Training, generation, ablation study scripts, and Docker/Singularity containers are openly released.
+
+6. **Evaluation Protocols**: Comparative benchmarks include SOTA baselines (CrystalFormer, WyCryst, CrystalGAN, CrystalDiffusion), using explicit metrics: symmetry-faithful uniqueness, distributional match to reference datasets, legality rate, and computational efficiency (tokens/sec, average N_equiv per group). A summary table/diagram highlights key advances—stepwise automorphism-marginalized sampling vs. static mask/post-hoc filtering in prior work.
+
+Every pipeline component is modular, parameterized (hyperparameter ranges and settings detailed in documentation), and supports full reproduction by external researchers.
+
+
+Hypothesis ID: 11
+Averaged Score: 3.5; Scores: [4, 3, 3, 4]
+Number of rounds: 1
+Refined Hypothesis:
+
+We hypothesize that a generative model for inorganic crystal structures can faithfully and uniquely reproduce the distribution of symmetry space groups—including rare high-symmetry classes—by integrating (A) systematic canonicalization of Wyckoff encodings and (B) group-theoretic loss regularization, both operationalized as follows:
+
+### Data Representation & Canonicalization
+
+1. **Wyckoff Position Encoding:** Each structure is encoded as a fixed-shape categorical tensor: (max_spacegroups × max_wyckoff_sites × site_features), where site_features includes encoded Wyckoff letter, positional parameters (continuous/fractional as needed), occupancy, and element type.
+
+2. **Canonicalization:**
+   - **Algorithm:** Enumerate all equivalent Wyckoff encodings under the space group’s automorphism group using Spglib/Pymatgen symmetry operations. Select the lexicographically-minimal encoding; in case of ties, use site point group order (higher symmetry first), then atomic number as final tiebreaker. Refer to attached code stub (see: github.com/[ref]/wyckoff-canonical).
+   - **Ambiguity/Disorder:** For partial occupancies or multi-occupancy, represent as a normalized sum across element one-hot vectors and a separate uncertainty mask channel. Structures with irreducible ambiguity are encoded with a predefined UNTYPED mask and marked for downstream evaluation.
+
+### Model Architecture
+
+3. **Backbone:** Employ an E(3)-equivariant transformer or graph neural network (e.g., e3nn, TensorFieldNet) mapping canonicalized tensors to structure logits.
+   - **Input:** (batch × max_spacegroups × max_wyckoff_sites × site_features)
+   - **Embedding:** Site-wise embeddings summed/pooled across elements for multi-occupancy, with explicit disorder masks.
+   - **Output:** Predict categorical distributions for each site (Wyckoff letter, element) and reals for positional parameters.
+
+4. **Automorphism Marginalization (Group Regularization):**
+   - Regularize prediction loss by marginalizing over a sampled subset (N=K) of automorphic Wyckoff encodings per structure, K tunable per space group; gradients averaged across samples. If group size exceeds threshold (e.g. >500), sample uniformly with fixed random seed for reproducibility. Ablation on K to validate consistency.
+   - **Loss:** Total = Data Likelihood + λ·Group-Theoretic Divergence (e.g. cross-entropy, Jensen-Shannon) between original and automorphic predictions. Tune λ by grid search on a held-out validation set.
+
+### Training, Validation, and Benchmarks
+
+5. **Training:** Use Materials Project/ICSD data, splitting by space group and composition to ensure coverage. For rare space groups, use data augmentation by permuting automorphisms.
+
+6. **Validation:** Evaluate uniqueness (canonical collision check), symmetry accuracy (group assignments), and robustness (mask/ambiguity handling). Design ablation/stress tests by space group size, group complexity, and disorder rate.
+
+### Novelty and Comparisons
+
+7. Explicitly document distinctions from DiffCSP, Crystal Diffusion, and Matten et al.: canonicalization occurs at the representation layer, automorphism-regularization is performed stochastically, and the model is validated on unique, symmetry-correct generation—features not jointly realized in prior works.
+
+This protocol, focused on inorganic crystals, advances group-theory-grounded generative modeling by combining canonical, efficient Wyckoff encoding with tractable group-aware loss, yielding unique, faithful, and valid crystal structure generation.
+
+
+Hypothesis ID: 12
+Averaged Score: 3.5; Scores: [4, 3, 3, 4]
+Number of rounds: 1
+We hypothesize that a generative model employing stepwise, legality-by-construction sampling conditioned on explicit space-group and Wyckoff position constraints will faithfully reproduce the distribution of crystal symmetry groups and surpass SOTA generative models in material stability, uniqueness, and novelty, without post-hoc filtering or ambiguity in Wyckoff labeling.
+
+Methodology:
+1. Data Representation: Each structure is encoded as (Space Group Number, ordered sequence of Wyckoff positions, mapping of atomic species to positions). For example, β-quartz (SG No. 180, Wyckoff positions 2a, 4b), with O/SI assignments.
+
+2. Dynamic Lookup Tables: For each space group, a precomputed table from the Bilbao Crystallographic Server enumerates all legal Wyckoff position occupancy patterns and their corresponding symmetry multiplicities. Atomic species assignment is constrained by finite, user-defined stoichiometry and charge-balance lookup rules (e.g., electroneutrality enforced from the ICSD valence database; conflicts are handled by rejecting illegal assignments at generation time).
+
+3. Generative Model: A Transformer-based conditional generative model (embedding space-group and global stoichiometry) produces structure histories stepwise. At each step:
+   a. The model selects a Wyckoff position based on remaining legal occupancy patterns, enforced by a dynamic mask derived from the space-group specific lookup table.
+   b. Masking is recalculated after every decision to disable illegal (by group representation or stoichiometry) branches.
+   c. The assignment of each atomic species to Wyckoff sites is similarly masked by allowed species (by charge, chemistry, rarity, user-specified options).
+   d. In cases of ambiguity (multiple equivalent representations for the same structure), all canonical forms are disallowed except the lex smallest by predefined rule (to avoid redundancy).
+
+Example (P2₁/c, SG No. 14): Given SiO2, valid Wyckoff patterns (e.g., {2e, 4f}) are drawn via mask; the model assigns O and Si steps, with illegal charge/compositional candidates masked dynamically. If no valid step exists due to constraint collision, sampling aborts and restarts.
+
+4. Training and Preprocessing: Training uses all unique, physically plausible structures from the Materials Project. To address rare space groups, synthetic data augmentation is applied uniformly based on space-group frequency, down-weighted by occupancy entropy to avoid overfitting. Low-occupancy and edge-case groups undergo oversampling, with masking tuned to prevent mode collapse.
+
+5. Benchmarking: The model’s validity (symmetry legality, chemical/charge balance), uniqueness, and diversity are evaluated by (a) comparing generated structure distributions with the real dataset, (b) direct side-by-side benchmarking with DiffCSP, FlowMM, and automorphism-marginalizing baselines, and (c) human- and algorithm-aided identification and quantification of ambiguous Wyckoff representations. A subset (~1000) is evaluated by automated DFT (fixed VASP settings: PBE, E_cut=520 eV, k-points 0.03 Å⁻¹), and phonon stability checks are performed.
+
+6. Limitations & Extensions: Any group or composition not present in the lookup basis is excluded; constraints are prioritized (symmetry > charge > chemistry). Failing generations (no valid mask step) are logged for coverage gap analysis.
+
+
+Hypothesis ID: 13
+Averaged Score: 3.5; Scores: [4, 3, 3, 4]
+Number of rounds: 1
+We hypothesize that a group-action-invariant generative model for inorganic crystal structures, built upon categorical Wyckoff site encodings and latent symmetry disentanglement, can faithfully reproduce the correct material symmetry distribution and generate stable, diverse, and chemically valid crystals. This model leverages explicit automorph enumeration, group-theory-aware loss functions, compositional plausibility filters, and tailored sampling/postprocessing. The core methodology is as follows:
+
+1. Data Representation and Preparation
+   - For each material structure (from MP-20 or similar), represent crystals by (i) space group label, (ii) Wyckoff site assignments (categorical variables), and (iii) atomic species per site.
+   - For each structure, enumerate up to N_max=10 symmetry-equivalent Wyckoff assignments (automorphs) using Spglib. Each sample is stored with all its automorphs for contrastive learning.
+   - Mask illegal Wyckoff motifs by empirical occurrence (mask = 1 if observed; optionally, allow rare/unseen patterns with low sampling probability and flag for analysis).
+   
+2. Model Architecture
+   - Backbone: Conditional variational autoencoder (cVAE) with two disentangled latent codes:
+     • z_sym: symmetry/action code, trained for invariance to automorphic input encodings
+     • z_struct: site/species code, capturing structure given fixed symmetry.
+   - Encoder/decoder built with message-passing neural networks (e3nn or EGNN) for permutation and rotation robustness.
+   - Group classifier/discriminator auxiliary head predicts space group from z_sym for disentanglement control.
+
+3. Loss Functions and Training
+   - Reconstruction loss on Wyckoff/sites/species.
+   - Contrastive/triplet loss over automorph pairs: lattices derived from automorphic representations mapped to nearby z_sym, separated from z_sym of non-automorphic crystals (margin=0.5).
+   - KL divergence and auxiliary cross-entropy for group classification.
+   - Chemical plausibility regularizer ensures valence, charge neutrality, and allowed site occupancies (enforced by predictor or rule-based filter).
+   - Ablation: train variants with differing automorph caps, with/without rare Wyckoff patterns, and with/without chemical filtering.
+
+4. Sampling and Generation
+   - During generation, sample space group, then sample legal Wyckoff patterns (with optional rare pattern exploration). Assign atomic types by learned composition model.
+   - Assign candidate fractional site coordinates consistent with Wyckoff constraints.
+   - Filter outputs post hoc by chemical plausibility predictor.
+   - For each structure: (i) evaluate symmetry (by Spglib), (ii) uniqueness (by structure hashes), (iii) stability (by surrogate ML potential or DFT for subset), and (iv) phonon stability (for select cases).
+   - Record and report the frequency and characteristics of out-of-distribution (unseen) Wyckoff patterns.
+   
+5. Latent Traversal and Disentanglement Validation
+   - Systematically interpolate in z_sym and z_struct; observe if traversals in z_sym yield crystals with identical structure but diverse automorphic encodings, and if z_struct produces distinct polymorphs within the same symmetry class. Use statistical tests and visual inspection for z_sym/z_struct independence.
+   
+6. Comparative Validation
+   - Include a comparison table to top 3–5 recent group-theoretic/categorical crystal generative models (see supplemental), highlighting differences in data representation, automorph handling, latent modeling, and post-processing pipeline.
+
+7. Reproducibility
+   - Clearly specify all key hyperparameters (e.g., latent dim, max sites n, per-group minimum m, masking temperature, training/validation splits, energy cutoffs). Provide code/scripts for automorph enumeration, chemical/structural filtering, and evaluation metrics.
+   
+Hypothesis Validity is tested by statistically evaluating if group-invariant latent representations (z_sym) enhance symmetry fidelity, stability, and uniqueness, especially for rare or extrapolated Wyckoff motifs.
+
+
+Hypothesis ID: 14
+Averaged Score: 3.5; Scores: [4, 3, 3, 4]
+Number of rounds: 1
+Hypothesis: Integrating fully-deterministic Wyckoff-position-based canonicalization, mathematically exhaustive group-action-based data augmentation, and a group-equivariant neural generative architecture—trained with a composite objective explicitly encoding distribution-matching for symmetry space groups, uniqueness, and structural validity—enables generative modeling of inorganic crystal structures that faithfully reproduces the diversity of real-world space group distributions, while robustly handling edge cases and maximizing reproducibility.
+
+Methodology:
+1. Data Representation & Exclusions:
+   a. Each structure is encoded as a sequence of tuples (space group number, ordered Wyckoff letter list, corresponding atom types, multiplicities).
+   b. For partial occupancies, high-Z', or disorder: A deterministic protocol is employed—(i) full exclusion for non-integer site occupancies or ambiguous disorder, (ii) mapping split-site/high-Z' structures to reduced canonical forms if all site coordinations can be unambiguously captured, with all rules specified in a public flowchart.
+
+2. Canonicalization:
+   a. Structures are canonicalized using a modified graph-based isomorphism algorithm (Nauty/Traces), with:
+      - Tie-breaking deterministically via a fixed lex order of (atomic number, Wyckoff position, symmetry operations), with random seed set and recorded for full auditability.
+      - All equivalent representations reduced to a unique encoding; mapping logs available for audit.
+
+3. Data Augmentation:
+   a. For each unique structure, all symmetrically equivalent Wyckoff assignments within the parent space group are exhaustively enumerated (up to a practical bound N max), with deduplication against canonical forms.
+   b. For [NaN]N structures per prototype, the augmentation budget N is adaptively optimized by tracking distributional equilibrium across space groups and diversity convergence on held-out validation samples.
+
+4. Model Architecture:
+   a. A neural network based on group-equivariant layers (e.g., e3nn or TensorFieldNet), with parameter sharing across symmetry operations, directly processes Wyckoff-encoded categorical sequences as input and generates atom types and positions conditioned on target space group.
+   b. Space group parameters are encoded as fixed embeddings; symmetry-induced constraints are hard-coded in the network architecture.
+
+5. Training Objective:
+   a. Composite loss: (i) cross-entropy for sequence generation, (ii) explicit Kullback-Leibler divergence for matching the output space group distribution to the empirical dataset distribution, (iii) uniqueness penalization within batches, and (iv) structural and symmetry validity via spglib (required: output must decode to a match of the input space group within a tolerance threshold; otherwise, candidate is flagged and logged).
+
+6. Evaluation & Ablation:
+   a. Ablation studies are pre-committed: (i) removal of augmentation, (ii) non-canonical input, (iii) replacement of equivariant with standard layers; each is assessed via (a) space group recovery rate, (b) structural validity, (c) generative diversity over the test set.
+   b. Canonical datasets: MP-20 and OQMD. Compute budgets and scaling thresholds are benchmarked and reported.
+
+7. Theoretical Result Claim:
+   a. The pipeline yields minimal sufficient, group-invariant representations for crystal generation guaranteed to preserve all symmetry-related diversity present in the data, with proofs and failure cases logged publicly.
+
+
+Hypothesis ID: 15
+Averaged Score: 3.5; Scores: [4, 3, 3, 4]
+Number of rounds: 1
+We hypothesize that a generative model for crystal structures, constructed to be intrinsically invariant under all Wyckoff equivalence group operations (G), can more faithfully reproduce the distribution of symmetry space groups found in datasets such as MP-20, compared to SOTA models that use either post hoc canonicalization or data augmentation. This hypothesis is implemented by the following methodological innovations:
+
+1. Representation: Crystal structures are encoded as sets of Wyckoff position assignments and atomic properties. We explicitly enumerate the Wyckoff equivalence group G for each space group, using the Bilbao Crystallographic Server or in-house symmetry libraries. Structures are organized into equivalence classes under G.
+
+2. Model Architecture: We use a permutation-invariant deep neural network (e.g., Set Transformer or Deep Sets), where the output distribution p_gen(S) of any structure S satisfies p_gen(S) = p_gen(g·S) for all g in G. This is enforced both by model construction and loss function design.
+
+3. Loss Functions & Training:
+   - a) For structures with |G| ≤ 1000, the loss is L = E_{S~data} [ E_{g∈G} [ L_gen(p_gen(S), p_gen(g·S)) ] ], where L_gen is negative log likelihood.
+   - b) For |G| > 1000, we sample k group elements per batch (k = min(64, |G|)), using uniform random sampling. Ablation experiments will compare uniform and importance sampling. Bias/variance from sampling is analyzed empirically (via convergence diagnostics), and theoretically when possible.
+   - c) We include an auxiliary contrastive invariance loss: L_inv = E_{S, g} [ ||f(S) - f(g·S)||^2 / (ε + ||f(S) - f(g·S)||^2) ], with ε set to 1e-6 unless scheduled/learned (ablation over ε will be performed).
+   - d) The total loss is L_total = L + λ_inv * L_inv, with λ_inv chosen from {0.1,1,10} on validation.
+
+4. Training Details: Models are trained with Adam (lr 1e-4, β1=0.9, β2=0.999), mini-batch size 512, with typical Set Transformer layers=4, dim=256, using ReLU activation. Data splits: 80%/10%/10% train/val/test, stratified by space group. Data augmentations treat only non-symmetric degrees of freedom.
+
+5. Decoding & Postprocessing: Decoded outputs are checked for validity by ensuring minimum atomic separations (≥ 1.4 Å for all atom pairs), and the output is mapped to a canonical form under G. Outputs failing geometric/chemical checks are discarded. Chemical relaxation (e.g., via fast force field optimization) is employed for final validation. False reject rates are tracked.
+
+6. Evaluation: Models are assessed on faithfulness to target space group distributions, uniqueness per equivalence class, and stability (post-relaxation formation energy). Ablation studies systematically remove or vary components (e.g., omit invariance losses) to measure their effect.
+
+7. Reproducibility: All group enumeration, model training, and evaluation scripts will be released. Statistical uncertainty and sample sizes are reported for each metric.
+
+This approach is rigorously benchmarked against SOTA methods including those with Wyckoff augmentation and canonicalization, as well as partial-group-invariance baselines, highlighting the effect of full model-intrinsic invariance.
+
+
+Hypothesis ID: 16
+Averaged Score: 3.5; Scores: [4, 3, 3, 4]
+Number of rounds: 2
+We hypothesize that a generative model for inorganic crystal structures will most faithfully reproduce the empirical distribution of symmetry space groups, as well as maximize stability, uniqueness, and novelty, when it operationalizes the following integrated protocol:
+
+1. Data Representation & Preprocessing:
+  - Encode each crystal as a tuple: (space group label; array of Wyckoff letters/positions; atomic sites with species and occupancies).
+  - Apply deterministic group-theoretic canonicalization (with explicit automorphism marginalization) using open-source libraries (e.g., spglib, nauty), both at dataset curation and model inference. Retain strictly unique representatives only.
+  - For structures with partial or mixed occupancies (>90% rule), define explicit exclusion or imputation protocol, documented as pseudo-code and with worked examples. Edge-case handling (e.g., disorder/order ambiguity, rare site types) is explicitly tabulated and benchmarked.
+
+2. Symmetry-Aware Augmentation:
+  - Generate augmented examples via exhaustive group action (legal Wyckoff permutations and possible atom maps), bounded for N ≤ 40 (expandable to higher N with prioritized sampling based on measured degeneracy). Document computational scaling (time, memory) and recommend hardware resources for these steps.
+
+3. Generative Model Architecture:
+  - Employ permutation-invariant and symmetry-aware architectures (e.g., Set Transformer, E3NN, or equivariant GNNs) operating on the canonical Wyckoff-encoded tuples.
+  - Integrate property conditioning: multi-property (composition, bandgap, formation energy, and others) encoded as continuous or discrete targets; the conditioning mechanism is explicitly described.
+  - Report all hyperparameters, legality masks, and architectural variants in a transparent and reproducible table. Provide pseudo-code for each module, especially the canonicalization, augmentation, and property-conditioning steps.
+
+4. Training, Inference & Fallbacks:
+  - Dual-use canonicalization and automorphism marginalization during both training and sampling ensures the output distribution is symmetry-faithful and unique.
+  - For tractability, fallback to approximate schemes (probabilistic canonicalization, greedy search) for N > 40 or rare space groups, with empirical benchmarks provided.
+
+5. Validation & Evaluation:
+  - Uniqueness/nanovelty by isomorphism checks (in-memory/run-time bounded for scalability).
+  - Stability via ensemble surrogate models (CGCNN, MEGNet, MatBERT) and DFT for selected candidates; document accuracy and limitations.
+  - Retrospective (MP-20, ICSD reproduction) and prospective (novel structure suggestion) validation pathways are both included, with protocols explicit.
+  - Novelty and methodological advances over SOTA (WyCryst, FlowMM, etc.) clearly tabulated: e.g., simultaneous property-wide conditioning, dual-phase canonicalization, explicit legality-by-construction, tractable automorphism marginalization, and edge-case handling.
+
+6. Reproducibility, Scaling, and Dissemination:
+  - All code (canonicalization, augmentation, architecture, validation) is open-sourced. Hardware requirements, scaling benchmarks, and resource footprints are documented. The framework supports community benchmarking and extension to hybrid/non-inorganic systems with explicit protocol modifications.
+
+This explicit, symmetry-centric, property-conditional, and community-ready workflow addresses longstanding SOTA limitations and is poised to enable more faithful and unique generative modeling of inorganic crystal structures.
+
+
+Hypothesis ID: 17
+Averaged Score: 3.25; Scores: [3, 3, 2, 5]
+Number of rounds: 1
+We hypothesize that a generative model for crystal structures that (1) encodes input crystals as canonicalized Wyckoff-position graphs, (2) explicitly masks outputs by space group constraints, and (3) is optimized with permutation- and symmetry-invariant losses, will produce unique, stable, and symmetry-compliant materials with greater fidelity than existing methods. Our methodology comprises the following steps:
+
+1. Data preprocessing: (a) For every structure in the dataset (e.g., MP-20/OQMD), compute its space group and assign all atoms to Wyckoff positions using spglib. (b) Canonicalize the Wyckoff assignment: For each space group, generate all symmetry-equivalent graphs (node: Wyckoff label + multiplicity + element; edge: symmetry relations), then select the lex smallest via NAUTY with numerical tie-breaking on fractional atomic coordinates. (Pseudocode: construct all graph isomorphs, sort by (space group, Wyckoff letter order, element, position precision); break ties by sum-of-coordinates; report ambiguity if partial/disordered occupancy is present, and log such cases for exclusion or special handling.)
+
+2. Wyckoff graph representation: Nodes encode (Wyckoff letter, multiplicity, element type, occupancy); edges encode symmetry equivalence and, for ambiguous sites (e.g. split occupancy), an explicit flag. Partial/disordered sites are logged and optionally masked during training.
+
+3. Dynamic output masking: For a given partially-decoded structure (prefix), at each autoregressive step, construct a binary mask over next valid Wyckoff-site-element pairs from the space group’s allowed list. Masks are computed using a fast lookup for common groups, with on-the-fly evaluation otherwise. For ambiguous/split Wyckoff positions, masks permit all consistent completions; violations emit soft penalties during training.
+
+4. Model architecture: An autoregressive transformer with position-wise learned embeddings (for space group, Wyckoff site, element), combined with edge encodings, is trained to predict the canonical Wyckoff graph ordering. Layer/hyperparameter suggestion: 6 layers, 8 heads, embedding dim 256. Output is masked as above at every step.
+
+5. Loss structure: a) Symmetry-permutation invariance is enforced with a DeepSets-style loss: L_pi = min_{pi in S_n} L(batch, pi(batch)). b) For uniqueness, an InfoNCE contrastive loss is used: positive samples are alternate canonicalizations of the same structure; negatives are structures from other batches. c) Output-level masking violation is penalized with a soft constraint: L_mask = ||1 - mask(p)|>0||_1, summed across decoding steps.
+
+6. Training protocol: AdamW optimizer, learning rate 1e-4, batch size 32, 5% dropout. During each batch, balance space group prevalence to prevent mode collapse.
+
+7. Validation: For each generated structure: (i) Canonicalize using the same protocol to check uniqueness; (ii) Verify  space group by re-applying spglib and ensuring >99% symmetry agreement; (iii) Check physical plausibility via: (a) minimum interatomic distance >1.4Å, (b) energy <0.2 eV/atom above convex hull (using a GNN energy regression surrogate). Failures are logged with error type (mask violation, non-canonical redundancy, symmetry mismatch, unphysical geometry). Partial/disordered structures are reported separately.
+
+This approach addresses the key bottleneck of ambiguity and redundancy in crystal generative modeling by enforcing canonical, symmetry-unique representations and generation, distinguishing it from all prior Wyckoff-based generative models.
+
+
+Hypothesis ID: 18
+Averaged Score: 3.0; Scores: [3, 3, 3, 3]
+Number of rounds: 1
+We hypothesize that a symmetry-aware generative model utilizing equivalence classes of Wyckoff representations as explicit discrete latent variables will produce crystal structures faithfully matching the symmetry distributions and uniqueness observed in real materials. The proposed methodology comprises:
+
+1. Data Representation and Equivalence Class Construction:
+- For each crystal structure (from MP-20 or similar datasets), enumerate all Wyckoff representations corresponding to its space group using spglib's get_symmetry_dataset function (standard settings) and pymatgen for structural parsing. Structures exceeding 20 atoms/unit cell or more than 6 unique Wyckoff positions undergo max N=10 sampling of non-redundant representations by random symmetry operations and uniqueness checks.
+- Represent each structure as a (i) space group number (scalar), (ii) set of equivalence-class Wyckoff assignments (as adjacency tensors or labeled bipartite graphs: dimensions [W, S], W=number of Wyckoff sites, S=species), and (iii) coordinates of symmetry-inequivalent atoms.
+- Canonicalization: Each Wyckoff configuration is hashed using Weisfeiler-Lehman graph hashes (networkx); structures are considered unique if hash(h(structure_A)) != hash(h(structure_B)).
+
+2. Encoding and Model Architecture:
+- Encode input as (a) one-hot vector for space group (size <250), (b) DeepSets-based or invariant GNN encoding for equivalence-class Wyckoff graph tensors, and (c) continuous coordinates in fractional format.
+- Model is a conditional VQ-VAE (vector quantized variational autoencoder): the discrete codebook indexes equivalence classes (graph embeddings) and the continuous channel encodes atomic positions. Autoregressive transformer layers model the conditional dependencies among Wyckoff positions and species, referencing CrystalFormer for sequential learning but extending it via explicit equivalence class integration.
+
+3. Training Objective and Loss Functions:
+- Loss = L_rec + β_1 L_KL + β_2 L_perm + β_3 L_symm + β_4 L_unique, with:
+    • L_rec: standard positional/identity reconstruction loss (MSE or categorical cross-entropy).
+    • L_KL: KL-divergence on continuous embeddings (VQ-VAE style quantization with straight-through estimator).
+    • L_perm: set-level permutation-invariance, e.g., cross-entropy on DeepSets output or as in invariant GNN loss.
+    • L_symm: symmetry violation penalty (fractional difference in space group, e.g., mean absolute error in symmetry function computed by spglib/pymatgen, soft penalty during training; post-processing for hard enforcement).
+    • L_unique: uniqueness/deduplication loss, penalizing hash collisions (margin-based triplet loss or contrastive divergence between generated structure hashes in each batch).
+- All loss coefficients (β_*) explicitly stated in code and protocol.
+
+4. Generation and Post-Processing Pipeline:
+- Sample discrete codebook index and continuous latent; decode to obtain space group, Wyckoff assignment, and coordinates; reconstruct full crystal using symmetry operations.
+- Validate by applying spglib to check assigned symmetry, uniqueness (hash deduplication), and charge neutrality (pymatgen). Filter invalid/duplicate structures.
+- Release full code, data loaders, hyperparameters, and flow diagrams.
+
+5. Novelty and Benchmarking:
+- Compare to Square Crystal, DeepCrystal, and CrystalFormer: only this approach models distributions over full equivalence classes as latent variables and enforces permutation-invariance and deduplication explicitly.
+- Evaluate on curated benchmarks (≤20 atoms/unit cell) for stability, uniqueness, and symmetry accuracy, including ablation studies on each loss term and encoding variant.
+
+
+Hypothesis ID: 19
+Averaged Score: 3.0; Scores: [3, 3, 3, 3]
+Number of rounds: 3
+Hypothesis: An integrated, modular generative framework employing deterministic, group-theoretic Wyckoff canonicalization, bounded symmetry-aware data augmentation, and property-conditioned transformer-based modeling will enable faithful reproduction of space group distributions and superior material stability, uniqueness, and novelty. Each step is operationally explicit, jointly modular, and reproducible.
+
+1. Data Representation: Encode crystals as sets of tuples (space group, Wyckoff positions, site species, site occupancies). Each structure is subjected to deterministic Wyckoff canonicalization: select a unique, automorphism-invariant Wyckoff sequence per structure via group action enumeration (see Pseudocode 1), capping enumeration for N>40 sites and defaulting to lowest lexicographic order in ambiguous cases. Explicit IO: Input = raw POSCAR/CIF; Output = canonical tuple sequence.
+
+2. Augmentation: For each canonicalized input, generate all symmetry-distinct but physically equivalent versions by enumerating crystal symmetries up to a diversity metric plateau (crystallographic entropy or graph edit distance < threshold δ). For large systems (N>40), sample group actions with coverage guarantee ε, tunable via hyperparameter. Explicitly bound augmentation to max_A per group (Table 1); log/track all augmented cases. Input: canonical structure; Output: list of augmented tuples (with group tags).
+
+3. Property Conditioning & Cleaning: Build property vectors (bandgap, formation energy, user-defined targets), impute missing data deterministically (median of compatible space group, composition, or site environment), and provide mask vectors. Normalize features and propagate property uncertainties. Input: canonical/augmented tuples; Output: feature/property matrices for training.
+
+4. Model Architecture: Autoregressive transformer backbone with embedded space group/position tokens, augmented by SE(3)-equivariant layers where atomic coordinates are generated. Modular, ablatable property-conditioning head; input-choice masking enables single/multi-property scenarios. All hyperparameters (embedding dim, layer count, attention heads, equivariant filter size, augmentation cap, diversity plateau δ, coverage ε) are listed in Table 2 with justified selection/search protocol (Bayesian optimization/ablation grid cited).
+
+5. Uniqueness & Novelty Filtering: Apply deterministic graph isomorphism (NetworkX’s VF2, tolerance τ) to generated outputs; log numerical tolerance used. Discard duplicates; mark ambiguous cases for error budget accounting (<5% expected loss).
+
+6. Edge Case & Fallback Handling: Mixed/ambiguous occupancies resolved by weighted consensus or majority rule (see Pseudocode 2), defaulting to exclusion if resolution falls below site confidence κ. All fallback decisions are logged, and impact on data coverage is quantified in the final report.
+
+7. Validation & Benchmarking: Benchmark the model with held-out accuracy on symmetry statistics (space group, Wyckoff sequence frequencies), uniqueness/diversity, and stability screens (CGCNN/MEGNet/MatBERT ensemble). Ablate canonicalization, augmentation, and conditioning modules to show individual and joint effects on performance axes.
+
+8. Reproducibility & Dissemination: All code (canonicalization, augmentation, property conditioning, benchmarking) is modular, open-source, and documented. Provide a challenge dataset and an external benchmark protocol (with schema) for third-party assessment. Schematic workflows and pseudo-code summaries are supplied for each core step (appendix).
+
+
+Hypothesis ID: 20
+Averaged Score: 3.0; Scores: [3, 3, 3, 3]
+Number of rounds: 3
+Develop a modular, symmetry-faithful, open-source generative modeling pipeline for inorganic crystals that unifies deterministic Wyckoff-automorphism canonicalization, hierarchical multi-tier autoregressive transformers, and dynamic group-theoretic masking, with explicit, extensible mechanisms for property control and disorder/mixed site representation:
+
+1. **Data Canonicalization and Encoding:**
+   - Encode each crystal as a canonicalized sequence of Wyckoff positions and site species using a deterministic graph isomorphism algorithm on site-multiplicity-labelled graphs, resolving all symmetry-induced automorphisms; retain linkage to all valid Wyckoff representations per structure for evaluation. 
+   - Represent disorder/mixed occupancy with explicit set-tokenization: for each site, store a categorical distribution over possible species/occupancy, and for partial occupancy, encode site-specific probabilistic weights as auxiliary features.
+   - Incorporate per-crystal property vectors (numeric: z-score normalized; categorical: one-hot; missing: learnable 'mask' embedding) concatenated at each generative tier.
+
+2. **Hierarchical Autoregressive Transformer Architecture:**
+   - Implement a triple-tier transformer: (a) Space group block (3 layers), (b) Subgroup chain block (4 layers), (c) Wyckoff-site/species block (6 layers), each with dedicated hidden sizes (512–1024) and heads (8–16). 
+   - At each generative step, dynamically compute valid token sets using pretabulated, version-tracked symmetry tables (International Tables; updated quarterly; scripts provided), enforcing group, Wyckoff, and site compatibility masks.
+   - Integrate property conditioning at every tier using concatenated embeddings; apply property-adaptive modulation (e.g., conditional LayerNorm) at block inputs and MLPs, with injection points specified for reproducibility (see process schematic in supplement).
+
+3. **Training, Validation, and Edge Case Handling:**
+   - Use RMSD-based structure clustering for data split (train/val/test), preventing leakage by ensuring all Wyckoff-canonical forms remain within assigned clusters; minimum test size: 500.
+   - Augment rare symmetries by random group-lowering and generative SMOTE-style synthetic sampling in Wyckoff/species categorical space.
+   - For severe/disordered or ambiguous sites (e.g., high-entropy alloys or fuzzy/missing data), define fallback rules: if site assignment ambiguous, encode as ensemble mixture during training and as conditional sampling during generation.
+   - Conduct controlled ablation studies (e.g., masking, canonicalization off/on, property conditioning per tier), reporting all core hyperparameters and empirical resource requirements.
+
+4. **Evaluation and Benchmarking:**
+   - Explicitly define and release code for: (i) Symmetry-Constrained Uniqueness (accounting for both automorphism equivalence and space group validity), (ii) Disorder-Resolved Novelty (novelty weighted by site/probability), and (iii) Structural Validity (charge-balance, geometric feasibility filters as pre-DFT checks).
+   - Maintain an open-source benchmark and leaderboard platform with modular code base, versioned datasets, and schema for submission/ablation reporting.
+
+5. **Transparency & Extensibility:**
+   - Supply detailed process diagrams, pseudocode for core data/workflow, minimal working code examples, and explicit documentation on table/data sourcing for external reproduction.
+   - Include a roadmap for cross-domain adaptation (e.g., to organics/hybrids) and integration with downstream property prediction/filter pipelines.
+
+This approach unambiguously specifies all critical representations, workflows, and validation routes for reproducible, property-controlled, and symmetry-faithful generative inorganic materials discovery.
+
+
+Hypothesis ID: 21
+Averaged Score: 2.75; Scores: [4, 2, 2, 3]
+Number of rounds: 2
+We hypothesize that a generative framework for inorganic crystal structures, integrating exhaustive group-theoretic constraints, automorphism-aware canonicalization, and hybrid property-conditional autoregressive modeling, will enable faithful reproduction of symmetry space group distributions and outperform SOTA methods in stability, uniqueness, and novelty. This framework comprises the following: 
+
+1. Data Representation: Each crystal structure is encoded as an ordered sequence of (space group, subgroup chain, Wyckoff positions, atomic species, site parameters), with discrete elements tokenized and continuous parameters discretized in bins (0.05 fractional units). Structures with multiple valid Wyckoff representations are each represented canonically (using nauty/BLISS), with automorphism enumeration and deduplication.
+
+2. Dataset Construction and Augmentation: The dataset (e.g., MP-20) is preprocessed with rigorous cluster-based train/val/test splits. Rare space groups are balanced via group-theoretic augmentation: (i) synthetic lowering (random valid subgroup selections), (ii) atom mutation (max 10%, chemically plausible substitutions), (iii) Wyckoff site reassignment (max 15%), (iv) SMOTE-like token-level sequence interpolation, with interpolation windows defined by nearest-neighbor structures in categorical token space (edit distance ≤ 2). Discrete interpolation is performed by randomly sampling between corresponding tokens from pairs.
+
+3. Model Architecture: A three-level hybrid VAE-Transformer is employed: (Level 1) Space group predictor, (Level 2) Subgroup chain/Wyckoff generator with dynamic group-theoretic masking (lookup from International Tables), (Level 3) Atom species and site parameter generator, with property-conditional control vectors. Layered attention segregates each modality, with explicit masking from pretabulated group/subgroup transitions. Canonicalization occurs after each sequence step; if ambiguity or computational timeout (>60s) arises, fallback triggers: (a) alternate canonical sequence by next-best model score, else (b) sample is marked as unresolved and flagged.
+
+4. Training and Benchmarking: AdamW optimizer, scheduled learning rates, batch size 64, early stopping; random seeds and full hardware/software stack are fixed and reported. Novelty is tabulated via 1:1 feature benchmarking with DiffCSP, WyCryst, and CrystalFormer. Every epoch, legality validation is performed: (i) group-theoretic constraints (checked via spglib), (ii) chemical plausibility (charge balance, common valence rules). The empirical frequency of fallbacks/timeouts and invalid/redundant generations per space group is logged.
+
+5. Evaluation & Reproducibility: Open-source preprocessing/canonicalization scripts are provided, complete with test data. Detailed reporting includes dataset sizes, augmentation rates, legal/novel generation rates, and resource/time statistics. All protocols are documented to ensure exact reproducibility.
+
+This approach uniquely integrates token-level group-theoretic augmentation, canonicalization at every generative step, hybrid property-conditional modeling, and rigorous legality filters, systematically addressing known shortcomings in SOTA symmetry-aware crystal generators.
+
+
+Hypothesis ID: 22
+Averaged Score: 2.5; Scores: [3, 2, 2, 3]
+Number of rounds: 1
+Refined Hypothesis:
+
+We hypothesize that a generative framework for inorganic crystal structures which incorporates explicit symmetry information via Wyckoff position equivalence sets, multi-view contrastive training, and consensus-based filtering can produce stable, unique, and symmetry-consistent materials distributions outperforming prior Wyckoff-based models. The essential methodological components are as follows:
+
+1. Data Representation & Preprocessing: 
+  - For each crystal, enumerate up to N_symm (e.g., 2–8) symmetry-equivalent Wyckoff position encodings using a group-theoretic library (e.g., spglib). These are treated as categorical variables via one-hot or learned embedding (dimension d_W), with fractional coordinates and occupancy represented as float vectors.
+  - Property labels (space group, band gap, formation energy, etc.) are concatenated as continuous/categorical embeddings or modulated via FiLM layers in the conditional model.
+  - Partial Wyckoff occupation is treated as a mask or via a special token in the encoder.
+
+2. Model Architecture:
+  - The generator is a conditional diffusion model, taking as input: randomly chosen Wyckoff encoding from the equivalence set, associated atomic features, and target/predicted property vectors.
+  - All outputs and contrastive representations are passed through a permutation-invariant pooling function (e.g., DeepSets with median or mean aggregation).
+  - Property conditioning is performed via concatenation or FiLM-like modulation at each layer.
+
+3. Training Objective:
+  - Main generative objective: maximize the log-probability of valid crystal structures conditional on the property vector and Wyckoff encoding.
+  - Multi-view contrastive objective: for each training batch, treat symmetry-equivalent representations as positive pairs and negatives as (i) other crystals, (ii) hard negatives sampled within the same space group but differing Wyckoff configuration. InfoNCE loss is used, with multi-positive handling across equivalence views. Hard negatives are mined via property and space-group proximity heuristics.
+  - Final loss: weighted sum of likelihood and contrastive objectives (α_contrast in [0.1, 1.0]), tuned during ablation.
+
+4. Generation and Consensus Filtering:
+  - At sampling time, for each target property set, generate K_attempts structures starting from different random seeds and symmetry-equivalent encodings.
+  - For each generated structure, apply spglib to verify symmetry and enumerate the full equivalence set; pass all views through property predictors.
+  - Use majority-vote or median aggregation over equivalence views for assigned space group and properties; a consensus filter (tolerance threshold τ_prop, e.g., 5–10% error) retains only those with consistent predictions across views.
+  - To preserve diversity and avoid mode collapse, monitor distributional spread before/after consensus filtering and allow adjustable τ_prop.
+
+5. Prior Work Positioning and Ablation:
+  - Clearly distinguish this hypothesis from prior approaches: past models either use data augmentation, canonicalization, or invariant layers, but none employ real-time, multi-view contrastive training and consensus filtering over true symmetry-equivalence classes in property-conditional generative models.
+  - Propose ablation studies: (a) canonicalization vs. data augmentation vs. multi-view contrast, (b) with/without consensus filtering, (c) with different hard negative mining heuristics.
+
+6. Benchmarking:
+  - Evaluate on Materials Project and OQMD datasets. Metrics: space group fidelity, fraction of unique/valid structures, property prediction consistency, computational resource usage.
+
+The hypothesis is thus operationalized for direct empirical testing, and every methodological decision is clearly specified to enable reproducibility and meaningful benchmarking.
+
+

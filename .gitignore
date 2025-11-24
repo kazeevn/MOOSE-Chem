@@ -1,4 +1,3 @@
-Checkpoints/*
 logs/*
 __pycache__/*
 *.pyc
@@ -7,7 +6,3 @@ logs/*
 Logs/*
 *.zip
 .env
-hypothesis.txt
-inspiration_corpus/
-research_background/
-hypothesis/

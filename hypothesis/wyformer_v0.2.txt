@@ -1,0 +1,692 @@
+Hypothesis ID: 0
+Averaged Score: 4.25; Scores: [4, 4, 4, 5]
+Number of rounds: 2
+We hypothesize that a fully integrated, representation-space diffusion generative model—explicitly coupled to a modular, adaptive, DFT-informed feedback loop and formal injectivity regularization—will enable reliable generation of stable, unique, and physically realistic crystalline materials.
+
+Methodology:
+
+1. Hierarchical Descriptor Representation: Crystals are encoded jointly by (a) atom-centered SOAP vectors (cutoff, radial/angular basis, normalization specified), (b) periodic motif graphs (nodes as unique atomic sites classified by Wyckoff positions, edges with wraparound bond/type features, explicit graph construction algorithm), and (c) global Fourier descriptors (windowed and symmetry-respecting per space group, with basis truncation parameters). All parameters are set by initial ablation and reported.
+
+2. Generative Core: A denoising diffusion model operates in the concatenated descriptor space. Model architecture (e.g., UNet variant with attention blocks) and optimizer (AdamW, learning rate, batch size detailed) are specified. The initial descriptor batch is sampled from the empirical training distribution, with operation schedules fully defined.
+
+3. Regularized Inversion: Recovery of atomic coordinates and lattice is performed through gradient-based optimization (Adam, loss = descriptor-space MSE + atomic clash penalties + energy surrogates), initialized from nearest training prototype (measured by descriptor-space Mahalanobis distance). Injectivity is enforced via a contrastive regularizer: pairs of structures/descriptors are pulled apart in representation unless identical, with the regularizer network and loss coefficients specified.
+
+4. Adaptive Feedback and Stability Loop: DFT calculations are performed on a sampled subset of generated candidates per epoch (quota and schedule pre-defined, e.g., n=32/epoch). DFT-predicted energies and geometry relaxations are used to: (a) recalibrate surrogate property models via Bayesian regression with uncertainty scores; (b) correct diffusion or inversion modules by backpropagating DFT-derived discrepancies as an auxiliary loss. The trigger for adaptive update is a moving average energy/rmsd drift crossing a statistical threshold.
+
+5. Module Integration: Data passes from generator → inversion in batches, with failures or high uncertainty flagged for fallback (e.g., re-initialize decoder, or add to outlier pool for separate analysis). Module communication is visualized in a pipeline diagram provided for reproducibility. Ablation is performed by systematically disabling each module, retraining, and reporting metrics (validity, stability, diversity, novelty) with k=5 repeats for confidence.
+
+6. Generality/Significance Evaluation: Benchmarked on Materials Project/OQMD, and challenged on new chemistries (e.g., disordered alloys or 2D materials), with full open-source pipeline and explicit resource requirements for DFT/retraining. All parameters, losses, and thresholds are published for replication.
+
+This hypothesis details all technical and chemical steps required to establish a novel, modular, feedback-coupled generative pipeline for crystalline material discovery.
+
+
+Hypothesis ID: 1
+Averaged Score: 3.75; Scores: [4, 3, 3, 5]
+Number of rounds: 1
+Refined Hypothesis:
+
+We hypothesize that a hierarchically structured, cross-conditioned, multi-stage generative pipeline based on denoising diffusion probabilistic models (DDPMs) operating in descriptor spaces can be devised to generate stable, unique, and realistic crystalline materials. The methodology comprises the following specific steps:
+
+1. Hierarchical Descriptor Definition:
+   - Local-level: Compute Smooth Overlap of Atomic Positions (SOAP) descriptors for atom-centered environments using a cutoff radius r_c = 5.0 Å, Gaussian width σ = 0.5 Å, maximum radial basis n_max = 8, angular basis l_max = 6, and normalize each descriptor to unit norm.
+   - Medium-range: Construct graph-based representations with atoms as nodes (typed by element), edges added for bond distances <2.5 Å, and edge attributes encoding bond type. Node attributes include atomic number, coordination, and electronegativity.
+   - Global level: Encode lattice-wide periodicity using Fourier-transformed electron density grids sampled at 0.08 Å, with truncation at the third reciprocal lattice vector for each axis.
+
+2. Multi-Stage Diffusion Generation:
+   - Three independently trained DDPMs correspond to each descriptor scale. Each uses 1000 diffusion steps, cosine noise schedule, latent vector dimension of 256 per stage, and U-Net architectures (4 blocks, depth 2, 128 filters) with shared weights for computational efficiency.
+   - Cross-stage conditioning is implemented as latent concatenation and attention-based read-outs from coarser to finer levels sequentially; information flows both ways during generation.
+   - Training is performed using Adam optimizer (lr = 1e-4), batch size 64, with explicit data augmentation for stoichiometry and symmetry.
+
+3. Surrogate Conditioning:
+   - At each diffusion stage, the generative process is conditioned on outputs of a graph neural network surrogate (e.g., SchNet) pre-trained to predict DFT-computed formation energies, space group, and band gap; uncertainty calibration is performed by ensemble dropout.
+   - Additional conditioning variables allow explicit tuning of target composition, symmetry, and diversity (entropy-regularized controls).
+
+4. Two-Step Reconstruction:
+   - Initial decoding from the descriptor manifold to atomic positions and lattice vectors employs a 5-layer feedforward neural network decoder (hidden size 512) trained on paired data; loss is a weighted L2 sum over position, lattice, and reconstructed SOAP/graph/Fourier features, normalized at 2:1:1 ratios, with early stopping based on validation RMSE.
+   - Further gradient-based refinement is performed in atomic/lattice space, minimizing a composite loss enforcing crystal symmetry (via group-matching penalties), periodicity (Fourier difference), and surrogate-predicted formation energy below a cutoff (e.g., -0.5 eV/atom), with Adam optimizer (lr = 5e-3), stopping after 200 steps or if all loss terms are below assigned tolerances.
+
+5. Feedback, Validation, and Fail-safe Mechanisms:
+   - Every N = 50 generations, 10% of outputs (selected via uncertainty ranking) are recalibrated by single-shot DFT to update surrogate model weights.
+   - Diversity is monitored via structure entropy measures; if collapse is detected (entropy drop >30%), a penalty is injected in the generation loss.
+   - Cases of failed invertibility or symmetry violation trigger fallback to nearest-neighbor imputation in descriptor space and mark regions for further sampling.
+   - Pilot study pre-validates injectivity of the combined descriptors on the OQMD and Materials Project datasets using t-SNE and neighborhood uniqueness metrics.
+
+6. Benchmarking and Dataset Plan:
+   - Model is trained and validated on a stratified sample (>40,000 structures) from OQMD and Materials Project, with explicit train/val/test splits and formation energy window (-3 eV/atom to 1 eV/atom), enforcing reproducibility with open-source code and random seed registration.
+
+This modular, highly specified workflow advances existing methods by integrating multi-scale, physically grounded descriptors, tightly coupled generative and surrogate models, and robust reconstruction/validation procedures not yet jointly realized in the materials generative literature to date.
+
+
+Hypothesis ID: 2
+Averaged Score: 3.75; Scores: [4, 4, 3, 4]
+Number of rounds: 1
+We hypothesize that stable, unique, and novel crystalline materials can be robustly generated by a modular, co-evolving, invertible diffusion-based representation-space pipeline, rigorously benchmarked against prior art and designed for maximal reproducibility. The hypothesized workflow comprises:
+
+1. Dataset and Preprocessing: Curate a primary dataset (e.g., ICSD, Materials Project) of periodic crystal structures with explicit selection criteria (composition, size, property diversity) and public DOIs. Preprocess by standardizing cell settings, applying symmetry reduction, and splitting via stratified k-fold division into train/val/test, with all scripts and random seeds open-sourced.
+
+2. Descriptor Definition and Optimization: Implement a hierarchical descriptor stack—SOAP vectors (cutoff radii 3–6 Å, basis 8–16, normalized), graph-theoretical features (node: atom, edge: neighbor within 5 Å, attributes: valency, coordination, electronegativity), and global periodicity metrics (lattice types, symmetry ops, Fourier windows). Grid-search parameter ranges and optimize via cross-validation for maximal injectivity and minimal reconstruction error on validation data.
+
+3. Adaptive Co-evolution: Jointly train (via alternating block schedules or progressive freezing) an invertible encoding/decoding stack and a U-Net-based denoising diffusion generative model in the optimized descriptor space. Explicitly monitor reconstruction error (e.g., <0.05 fractional lattice displacement and site RMSD <0.1 Å) and property preservation (bandgap, stability surrogate) per synthesized sample.
+
+4. Generative Sampling and Filtering: Stochastically sample in the learned descriptor manifold, reconstruct candidate periodic structures, and filter through an ensemble of calibrated surrogate models (gradient boosting, equivariant GNNs, MC dropout uncertainty). Retain only candidates passing tight error margins and physical plausibility constraints.
+
+5. Ablation, Fallback, and Recycling: For descriptor or reconstructive failures (non-injective mappings or unphysical/malformed output), trigger fallback to alternate descriptor windows or restrict to local structure-space refinement, explicitly logging all discarded samples for reproducibility. Ablation studies systematically remove modules (e.g., co-evolution, uncertainty) to assess mechanism contribution.
+
+6. Tiered DFT Validation and Benchmarking: Screen final candidates through a two-stage DFT protocol—(a) geometry optimization and stability with GGA-PBE (cutoff 500 eV, k-point density 0.03 Å⁻¹), then (b) property calculation (bandgap, elastic constants) with higher-level meta-GGA for finalists. Directly benchmark to state-of-the-art baselines (e.g., CrySPNet, e3nn-GAN, VAE), reporting on uniqueness, stability, and reconstruction fidelity.
+
+7. Applicability and Extension: The pipeline targets inorganic crystalline classes (e.g., oxides, halides, chalcogenides) and is extensible to defect/disordered systems by adapting the descriptor/decoding interfaces. All code, data splits, and parameter settings will be released to establish a reproducible, community-standard platform.
+
+This integrative, modular approach explicitly addresses known limitations of structure-space and fixed-descriptor generation and enables rigorous, adaptive discovery of physically meaningful crystalline materials.
+
+
+Hypothesis ID: 3
+Averaged Score: 3.75; Scores: [4, 3, 3, 5]
+Number of rounds: 1
+We hypothesize that a modular, hierarchical generative workflow can produce stable, unique, novel, and realistic crystalline materials through a sequence of motif-based assembly steps with multi-objective feedback at every hierarchy level. The steps are as follows:
+
+1. Motif Library Construction:
+   - Curate an initial motif library from the ICSD and hypothetical enumeration (via enumeration of crystal prototypes and Wyckoff settings; default motif size: 2–10 atoms).
+   - Each motif includes space group assignments, allowed Wyckoff positions, and symmetry-validated geometry.
+   - Motifs with atom counts > 50/unit cell or implausible bond distances are excluded.
+
+2. Motif Representation and Property Surrogates:
+   - Represent motifs and partial assemblies as crystal graphs.
+   - Train a deep ensemble of CGCNN models on MatBench and OQMD for both complete and partial structures. Input features for partial structures use masked node/edge representations and imputed values for undefined regions.
+   - Uncertainty quantification is via ensemble spread; predictions with ensemble std. dev. > 0.15 eV/atom are flagged for fallback/correction.
+
+3. Generative Assembly Algorithm:
+   - Use a conditional GraphVAE that samples sequences for (i) motif selection, (ii) motif placement (Wyckoff, lattice parameters), and (iii) composition.
+   - At each assembly stage, enforce hard constraints: charge neutrality, interatomic distances (2.0–3.0 Å for main-group elements), maximum cell contents (<100 atoms), and allowed space groups.
+   - After each assembly step, use the CGCNN ensemble to estimate formation energy (plus band gap if relevant). Candidates outside the 80th percentile for energy (compared to training set) are pruned.
+   - Diversity is maintained by a Tanimoto distance cutoff (≥0.2) using graph fingerprints between surviving candidates.
+
+4. Fallback Evolutionary Search:
+   - Assemblies failing constraints but within model uncertainty windows follow a mutation/selection cycle:
+      • Mutation (prob: 0.25/motif): swap motif, perturb lattice, or alter composition within chemical valence rules.
+      • Selection: Retain top 10% by predicted property; proceed until 5 consecutive cycles yield ≤1% diversity gain.
+   - Evolutionary convergence is monitored by the flattening of the Pareto front (NSGA-II) across formation energy and diversity objectives.
+
+5. Adaptive Motif Library Evolution:
+   - Add new motifs when recurrent partial assemblies—verified as plausible and unique (via subgraph mining)—consistently yield low predicted energy in evolutionary cycles (at least five occurrences with median energy within the 20th percentile of known motifs).
+   - Library contraction is applied to unused motifs (<1% selection after 50 cycles).
+
+6. Validation and Monitoring:
+   - For every candidate at every hierarchy level, track pass/fail rates (constraints, diversity, energy), surrogate model MAE, and ensemble calibration curves.
+   - Benchmark the workflow on ternary oxide perovskites, reporting coverage of ICSD-known compositions and fraction of unique topologies.
+
+All parameter defaults and workflow steps are fully specified above and in supplementary tables/flow diagrams. This design allows methodical, reproducible exploration of crystalline material space with dynamic, hierarchy-level feedback and rigorous physical filtering, and surpasses prior approaches by enabling property-driven corrections at all generation stages and coevolution of the motif library.
+
+
+Hypothesis ID: 4
+Averaged Score: 3.5; Scores: [4, 3, 3, 4]
+Number of rounds: 2
+We hypothesize that a hybrid modular generative framework combining motif-based hierarchical assembly, symmetry-invariant neural architectures, diffusion-process-driven relaxation, multi-level surrogate-guided optimization, and auto-tuning constraint management will uniquely enable the generation of stable, novel, and realistic crystalline materials. Specifically:
+
+1. Motif Extraction & Library Formation:
+- Automated segmentation of reference crystal datasets (e.g., Materials Project, OQMD) into sub-crystal motifs (2–8 atoms per motif), using graph-cut algorithms with entropic and physical cutoffs (e.g., maximum bond length, atom-type diversity, with data-driven threshold search optimizing motif coverage and structural integrity).
+- Motifs encoded using periodic graph kernels; library representations and schemas released for reproducibility.
+
+2. Hierarchical Assembly & Multi-Objective Motif Selection:
+- Construction proceeds via stepwise motif addition within N×N×N supercells (unit cell sizes and lattice parameters drawn from domain-informed priors, e.g., Matminer/AFLOW), preserving/expanding space-group constraints.
+- At each step, selection of candidate motifs is determined by a multi-objective acquisition score:
+  S(m) = α·diversity(m) + β·novelty(m) + γ·surrogate_stability(m|context) + δ·compatibility(m|cell),
+  with weights (α, β, γ, δ) adaptively tuned via reinforcement learning targeting pass rates/diversity.
+
+3. Surrogate-Guided Filtering & Uncertainty Quantification:
+- Candidate partial/full assemblies screened by retrainable ensemble surrogate models: structure graphs (CGCNN/MEGNet) for formation energy, DFT-validated uncertainty-aware regressors for out-of-domain candidates.
+- Out-of-domain flagging uses Mahalanobis distance in feature space; flagged candidates queued for DFT (or experimental) validation and model retraining.
+
+4. Symmetry-Invariant Relaxation / Diffusion Refinement:
+- Intermediate and final assemblies refined using learned score-based diffusion processes (symmetry-aware graph transformers) performing coordinate relaxation and atom-type updates along predicted energy gradients, with explicit preservation of translation, rotation, permutation, and periodic invariance.
+- Relaxation hyperparameters (e.g., step size, K, convergence criteria) auto-tuned per batch via error-driven adaptation.
+
+5. Dynamic Constraint Tightening & Fallback Operations:
+- Upon constraint violation (e.g., unphysical motifs, instability, symmetry breaking), a local constraint module (random forest classifier trained on failure logs) proposes hyperparameter shifts or hard filter tightening; failed searches backtrack with logged parameter updates.
+
+6. Benchmarking Protocols & Reproducibility:
+- Standard data splits (train/val/test: 0.8/0.1/0.1), 3000-candidate minimum per run; benchmarking against prior SOTA on diversity, uniqueness, physical plausibility, and target property enrichment using open-source codebase (e.g., Github) and standard toolkits (pymatgen, ASE).
+- Computational benchmarks specify node/GPU requirements and wall-times. 
+
+This integrative framework, featuring motif coevolution, uncertainty-aware optimization at multiple hierarchical levels, and fallback-rich search, will offer a rigorously reproducible, symmetry- and energy-informed pathway to generative crystalline materials discovery, distinguishable from all existing approaches by its operational modularity and constraint adaptivity.
+
+
+Hypothesis ID: 5
+Averaged Score: 3.5; Scores: [4, 3, 3, 4]
+Number of rounds: 1
+We hypothesize that a generative pipeline based on deterministic geodesic traversal across a symmetry-invariant Riemannian latent manifold, with explicit novelty and stability multi-objective optimization and real-time surrogate property filtering, can produce stable, unique, and physically valid crystalline materials beyond existing databases. The approach proceeds as follows:
+
+1. **Descriptor Selection & Embedding**
+   - Use established crystal datasets (Materials Project, ICSD). Evaluated descriptors include e3nn, SOAP, and Voronoi tessellation, selected by mean absolute error for property prediction (<0.1 eV/atom), symmetry retention score (>98% on test set), and embedding dimension (32–256, grid searched). Ablation on 2–3 datasets justifies the final choice.
+
+2. **Manifold and Metric Learning**
+   - Employ a Riemannian VAE (RVAE) with a trainable kernel metric tensor regularized by latent distance-volume and symmetry reconstruction constraints (weightings lambda_sym, lambda_metric; optimized by grid search). Physical similarity is validated by latent nearest neighbor matching in the descriptor and property space (F1 >0.9 versus crystallographic similarity labels).
+
+3. **Geodesic Traversal and Generation**
+   - Paths between known and randomly seeded structures are optimized for novelty (latent L2 distance > epsilon, set by percentile of training data) and stability (CGCNN/MEGNet-predicted energy <0.1 eV/atom above hull; phonon gap >4 THz). Geodesics are integrated numerically via adaptive Runge-Kutta with max step size 0.1, initial tangent directions sampled from property gradient and novelty metrics. Step sizes and objective weights (alpha, beta) are tuned via Bayesian optimization on a held-out dataset.
+
+4. **Surrogate Filtering and Error Handling**
+   - Surrogate models trained per descriptor produce uncertainty intervals via MC dropout (spread <0.05 eV/atom for acceptance). Ensemble property filters cross-check formation energy, band gap, and mechanical stability, with thresholds set by DFT-validated screening. Back-evaluation involves re-encoding generated structures to flag off-manifold anomalies (>1.5σ from training embedding centroid). Candidates failing validation are either discarded or subject to local manifold smoothing/geodesic re-sampling; fallback switches to stochastic VAE sampling if deterministic attempts repeatedly fail.
+
+5. **Reconstruction and Symmetry Enforcement**
+   - Representation-to-structure inversion uses L-BFGS minimization under group-theoretical constraints with stopping criteria of max 50 steps or property convergence <1 meV/atom. Lattice constant/angle deviations are capped at <1%, point group/space group checked against original training classes. Cyclical consistency is verified by reconstructing → re-encoding, requiring >97% overlap with latent representation.
+
+6. **Validation**
+   - Top-N (N=10–20) generated candidates undergo DFT relaxation; final stability, symmetry, and property fidelity scores (>95% compared to surrogate prediction) are required for downstream consideration. Protocols, hyperparameters, and code will be provided for strict replication.
+
+This method’s novelty lies in integrating deterministic geodesic paths, property- and novelty-gradient-guided symmetry-aware manifold traversal, and continuous real-time surrogate filtering—none addressable by prior stochastic or local generative methods in crystal structure discovery.
+
+
+Hypothesis ID: 6
+Averaged Score: 3.5; Scores: [4, 3, 3, 4]
+Number of rounds: 1
+We hypothesize that a generative framework for crystalline materials can systematically produce stable, unique, novel, and realistic crystal structures by tightly coupling (A) symmetry- and constraint-aware graph-based generative modeling, (B) active learning via uncertainty-driven feedback, and (C) rigorous ab initio validation, as follows:
+
+1. Symmetry-Aware Generative Model: 
+- Encode crystal graphs using E(3)-equivariant Graph Neural Networks (e.g., SphereNet, GemNet) which embed symmetry elements and atomic environments. 
+- Employ a variational autoencoder (VAE) or GhostVAE framework, where the latent space is explicitly structured by symmetry class and composition. 
+- During decoding, enforce hard constraints via sequential projection: (i) at each step, candidate structural parameters are tested for physical validity (e.g., charge neutrality, composition bounds, minimal interatomic distances, symmetry group assignment). If invalid, parameters are projected to the nearest feasible point (using, e.g., quadratic programming with linear and semidefinite constraints). The projection algorithm sequentially prioritizes (1) space group/symmetry, (2) charge neutrality, (3) composition, and (4) lattice parameter realism. Fallback is to reject and resample latent variables if no feasible solution exists after projection.
+
+2. Uncertainty-Aware Active Learning Loop: 
+- A property predictor (ensemble GNN or Bayesian neural net) is co-trained with the generative model to estimate formation energy, with uncertainty quantified by predictive variance across the ensemble or via Monte Carlo dropout. Only candidates with predictive variance >0.05 eV/atom are flagged as high-uncertainty. Each generation batch is comprised of (a) low energy, low-uncertainty candidates and (b) a quota drawn from the top 10% high-uncertainty candidates to maximize exploration.
+- To maximize structural uniqueness/diversity, represent candidates with SOAP fingerprints using a cutoff radius of 6 Å, and cluster new/existing samples by k-medoids in fingerprint space. Batches are constructed to maximize the minimum pairwise fingerprint distance.
+
+3. DFT Validation and Labeling Pipeline: 
+- High-priority structures from the above step are subject to DFT relaxation using the PBE-GGA exchange-correlation functional, 500 eV energy cutoff, PAW pseudopotentials, and full relaxation until forces <0.01 eV/Å. Stability is defined as formation energy Eform < -1.0 eV/atom; structures failing this or dynamic stability checks are removed from the training pool. Surrogate models (e.g., ML potentials) pre-screen for gross instabilities before DFT is run to improve compute efficiency.
+
+4. Iterative Retraining: 
+- As DFT-labeled data accumulates, both generative and property-predictor networks are incrementally retrained. To prevent catastrophic forgetting, a replay buffer with the last N=10k diverse samples is mixed with new data during each retraining epoch, and L2 regularization keeps feature drift minimal.
+
+5. Benchmarking and Novelty Analysis: 
+- Throughout, explicit comparisons are run versus baseline pipelines (CrystalVAEs, pure GANs, models without explicit constraint enforcement or uncertainty feedback). Novelty is quantified by cross-referencing generated structures against ICSD and OQMD using tolerance-based structure matching, as well as comparing workflow coupling via ablation studies.
+
+This joint, online, closed-loop pipeline leverages mathematical projection, explicit symmetry/constraint embedding, uncertainty-guided selection, and continual learning to realize chemically valid, diverse, and novel crystal structures.
+
+
+Hypothesis ID: 7
+Averaged Score: 3.5; Scores: [4, 3, 3, 4]
+Number of rounds: 3
+We propose a modular, audit-ready generative framework to design and validate stable, unique, and experimentally accessible crystalline materials. The pipeline integrates the following core modules:
+
+1. **Motif- and Descriptor-Guided Sequential Sampling**: The generator selects space group, composition, and initial lattice parameters via algorithmic motif assembly, guided by domain-validated libraries, chemical valence, and electroneutrality constraints.
+
+2. **Representation-Space Diffusion Module**: Using physics-informed, symmetry-invariant descriptors (SOAP: cutoff=6.0 Å, n_max=8, l_max=6; graph-based attributes; global Fourier descriptors), a denoising diffusion probabilistic model (DDPM, 24 layers, latent dim=128, AdamW optimizer) samples candidate crystals in descriptor space, with explicit ablation for descriptor-injectivity and physical plausibility.
+
+3. **Adaptive Reconstruction and Validation**: Crystalline candidates are reconstructed using differentiable, gradient-based optimization; real-time injectivity tests and reconstruction error thresholds (<5% atomic RMSD) determine fallback to alternative descriptors or motif reassembly if ambiguity arises.
+
+4. **Surrogate Property Filtering and Synthesizability Audits**: Candidates are filtered by surrogate models (MEGNet/CGCNN; ΔE_form < -1.5 eV/atom, heuristics for kinetic/synthetic accessibility, e.g., ML-learned risk indices). Failing candidates are flagged for modular diagnostic review and iterative correction.
+
+5. **Physical/Experimental Plausibility and Feedback Loop**: Only outputs satisfying strict symmetry, stoichiometry, and property-based criteria and passing synthesisability filters are prioritized. Top-ranked structures are mapped to high-throughput experimental screening (e.g., robotic synthesis; collaboration with crystallographers) and subsequent DFT calculation (bulk modulus, phonon stability, bandgap as appropriate). Experimental feedback/active learning retrains the pipeline for improved yield.
+
+6. **Benchmarking/Auditability**: The pipeline is benchmarked against GraphCrystalDiffusion, GAN-Crystal, and E(3)-equivariant GNNs using MatBenchCIF and RealMaterials datasets, with full reporting of generation diversity, crystal validity, error rates, and open code/data release.
+
+This end-to-end, auditable, and fallback-adaptive pipeline provides a new standard for transparent, adaptive, and experimentally actionable crystal generation, uniquely enabling access to complex spaces (e.g., superionic conductors) and iterative improvement via experimental feedback.
+
+
+Hypothesis ID: 8
+Averaged Score: 3.25; Scores: [4, 3, 3, 3]
+Number of rounds: 1
+We hypothesize that a Hierarchical Reinforcement Learning (HRL) generative framework can produce stable, unique, and realistic crystalline materials, specifically binary oxides, by integrating multi-level domain actions, explicit physical/chemical constraints, and tiered quantum validation. 
+
+Methodology:
+
+1. Lattice Initialization: At the top hierarchical level, an agent samples Bravais lattice type and parametrizes lattice constants and angles within physically motivated discrete grids (e.g., a = 2.5–10 Å in 0.2 Å steps; α, β, γ as symmetry-allowed intervals). Allowed unit cell shapes/ratios are derived from known oxide databases (Materials Project, COD) to avoid unphysical geometries. Boundary conditions (e.g., min/max lattice volumes, aspect ratios) prevent unphysical unit cells.
+
+2. Motif and Basis Construction: The mid-level agent places motifs (e.g., O, cation-centered polyhedra, common binary oxide fragments) onto lattice sites. Motif candidates are curated and encoded from high-frequency fragments in training datasets, and a specified motif diversity pressure (e.g., maximum motif repetition per generation) is enforced. Motif orientations and cell placements are sampled respecting point group symmetry and database-derived rules.
+
+3. Atomic Mutations: At the lowest level, atomic addition, deletion, and type-swaps are performed on motif/basis configurations. An explicit action table, published alongside code, details legal operations per motif/atom type, validated by crystal graph connectivity rules curable from source databases. Chemical filters remove immediately invalid states (e.g., ultra-short bonds <1.6 Å, charge imbalance beyond ±2/unit cell), and after each step, the structure is energy-evaluated by an ML surrogate (e.g., M3GNet or CGCNN, with uncertainty quantification via ensemble/MC dropout). Transitions with high surrogate uncertainty are earmarked for active learning: relaxations are prioritized for quantum-level (DFT-PBE) recalibration.
+
+4. Symmetry and Invariance: All state/action encodings and GNN/RL architectures are strictly designed to preserve permutation, translation, rotation, and periodic symmetry. Group-equivariant neural networks (e.g., e3nn) enforce these invariances end-to-end.
+
+5. Curriculum Learning: Complexity rises in staged curricula, triggered by surpassing quantitative benchmarks (e.g., >95% chemical validity and >90% structural uniqueness per batch as judged by fast surrogate and graph matching). Early stages emphasize simple lattices/simple motifs; later stages unlock more combinatorial options (including less frequent motifs and larger supercells).
+
+6. Hierarchical RL Implementation: Policies at each hierarchical level are trained with PPO or equivalent (Stable Baselines3 recommended), and state/action/reward structures are modular and shared. Exploration failures (dead ends, unphysical branches) are detected by termination checks; the agent receives negative reward and is reinitialized. Reward is shaped via explicit thresholds: e.g., ML energy <0.1 eV/atom above convex hull, force <0.05 eV/Å, minimum motif/atom diversity, and chemical rules. All failed, high-uncertainty, or out-of-distribution trajectories are logged for retrospective analysis and active ML retraining.
+
+7. Tiered DFT Validation: Structures meeting surrogate and chemical benchmarks are batch-submitted to DFT for relaxation. Batch size is dynamically allocated to confirm surrogate performance and maintain exploration. Failed DFT relaxations are catalogued, and such motifs or actions are downweighted in further RL training. Experimentally known structures are included for cross-benchmarking, and all stable discoveries are compared to existing prototypes.
+
+A complete, extensible action dictionary, benchmarks, and protocols will be provided to ensure reproducibility and facilitate future extension to higher-order or non-oxide chemistries.
+
+
+Hypothesis ID: 9
+Averaged Score: 3.25; Scores: [4, 3, 3, 3]
+Number of rounds: 1
+We hypothesize that an adaptive, multi-constraint diffusion model, hereafter Adaptive Constraint Crystal Diffusion Generator (AC-CDG), will generate stable, unique, and realistic crystalline materials by explicitly embedding and dynamically balancing symmetry, bonding, and arbitrary physicochemical constraints throughout the score-based denoising process. Methodology:  
+
+1. Data/Space Definition: Use curated datasets (e.g., Materials Project, ICSD, OQMD); represent each sample as tuple (L, A, X), where L=crystal lattice, A=atom types/positions, X=auxiliary properties. 
+
+2. Model Architecture: Employ an equivariant graph neural network (GNN) as neural score model within a diffusion framework; maintain permutation, translation, rotation, and periodic invariances.  
+
+3. Constraint Masks: For each sample and diffusion step, construct a constraint mask matrix M ∈ {0,1}^{N_atoms × N_constr}, where M_ij=1 if atom i's jth constraint (symmetry, valence, charge neutrality, etc.) is currently satisfied or relaxed, 0 otherwise. Merge symmetry and chemical constraints by logical intersection and assign per-constraint priorities for conflict resolution. 
+
+4. Adaptive Weighting: Maintain adaptive weight vector λ ∈ R^{N_constr}, updated online by gradient-based Lagrangian methods:
+   λ_j <- max(λ_j + η·(⟨constraint_violation_j⟩_batch - δ_j), 0),
+   where η is learning rate, δ_j is permissible violation threshold. The loss at each denoising step becomes:
+     L_total = L_diffusion + Σ_j λ_j · L_constraint_j(M),
+   with L_constraint_j defined as explicit terms (e.g., symmetry deviation norm, valence error, charge/polarity penalty).
+
+5. Sampling Loop: At each diffusion step:
+    a. Generate candidate structure via score model.
+    b. Evaluate all constraints; compute M and L_constraint_j.
+    c. If any critical constraint (e.g., valence, global symmetry) violated beyond hard threshold, trigger fallback: (i) attempt targeted correction (e.g., SPGLIB symmetry repair, local atom swaps), (ii) else resample from previous valid noise state or re-initialize as needed. Fallback cascade capped at N_attempts before abort.
+    d. Adaptively update λ (as above) based on running mean violations in current batch.
+    e. Continue denoising loop.
+
+6. Surrogate Constraint Handling: When fast evaluation is needed, employ calibrated surrogate ML models to screen bonding/motif constraints, defaulting to stricter masks when model uncertainty is high. 
+
+7. Validation Benchmarks: Generated crystals assessed for energetics (DFT hull >0.3 eV/atom below decomposition), uniqueness (structural similarity index), and symmetry (space group recovery). Diversity measured as number of unique space groups/motifs above K-sample threshold. Optionally, select candidates passing all computational screens for lab synthesis preparation by verifying cell size, composition, and synthetic accessibility.
+
+This approach generically extends to new constraints (e.g., magnetic, mechanical), is directly comparable to—and advances over—recent literature by online, end-to-end, enforce-and-adapt constraint integration, and is operationally reproducible via the detailed mechanism described above.
+
+
+Hypothesis ID: 10
+Averaged Score: 3.25; Scores: [4, 3, 3, 3]
+Number of rounds: 2
+We hypothesize that a generative model—combining: (1) injective, symmetry-aware descriptor-space diffusion, (2) hierarchical motif decomposition, and (3) adaptive, physically-validated feedback—will produce stable, unique, novel, and realistic crystalline materials beyond current state-of-the-art approaches. The methodology is as follows:
+
+1. **Descriptor Construction:** For a training set of crystalline materials, compute descriptor vectors per structure. Employ a hierarchy: local (SOAP vectors, cutoff=5.0 Å, 6 radial/8 angular channels, normalized), graph-based (atom/bond adjacency matrices, explicit node/edge features for type/coordination, including periodic edges), and global (cell parameters, Fourier coefficients of compositional/electrostatic maps, windowed at 0.2 Å bins). Ensure descriptor injectivity via a validated reconstruction RMSD threshold (<0.08 Å after 3 L-BFGS optimizations). If violated, recalibrate local/global descriptor weights or introduce higher-order features until satisfied.
+
+2. **Motif Decomposition:** For each crystal, apply spglib (tolerance=0.02 Å) to identify symmetry elements and perform spectral clustering (similarity cutoff=0.85) on local descriptors to extract structural motifs and adjacencies. Flag ambiguous groupings; for structures with unclear motifs, motif sets are expanded using consensus clustering and reinforced with DFT-calibrated stability scores. Clusters with persistent ambiguity (CV>0.2 motif assignment over 5 runs) trigger expert/algorithmic review.
+
+3. **Descriptor-Space Diffusion Generation:** Train a denoising diffusion model (latent size=256, 16 diffusion steps, UNet backbone with four 128-node layers and group normalization) on the injective descriptor set, conditioning on motif/environment/class labels. 
+During generation, periodic/symmetry constraints are strictly enforced at each step via analytic projection of descriptors. The model outputs descriptor-motif graphs; reconstructions to full 3D coordinates are performed via constrained gradient optimization (initial guess from motif library, coordinate refinement via L-BFGS, convergence=10e-4 eV/Å).
+
+4. **Validation and Adaptive Feedback:** Generated structures undergo multi-tier validation: (a) symmetry/injectivity checks; (b) surrogate stability prediction (random forest ensemble on concatenated descriptors + motif type/fractions, 20 trees, max depth=12, retrained every 1000 generations if mean absolute error >0.07 eV/atom); (c) single-point DFT for the top 2% highest surrogate-predicted stabilities. Validation failures trigger: motif re-extraction, descriptor recalibration, rejection sampling, or targeted active learning (structure and property added back into training/fallback pools).
+
+5. **Library/Protocol Evolution:** Motif and descriptor libraries are continuously expanded and tracked. Monitor motif diversity and structure class coverage; stalling (no novel motif after 1000 generations) triggers targeted data augmentation (e.g., transfer learning from related compositions, domain-expert motif generation).
+
+6. **Reproducibility:** All parameter settings, code, and data splits are frozen before blind testing; a reference implementation and end-to-end protocol (with pseudocode) are made available for community benchmarking and reproduction.
+
+This unified approach enables hybrid, symmetry-aware generation strictly monitored for injectivity, adaptability, and comprehensive error handling, setting a new operational standard for stable crystalline material discovery.
+
+
+Hypothesis ID: 11
+Averaged Score: 3.25; Scores: [4, 3, 3, 3]
+Number of rounds: 3
+Develop a modular, motif-centric generative protocol for crystalline materials synthesis characterized by hierarchical, symmetry- and periodicity-respecting representation, rigorous per-step constraint enforcement, and dynamic motif/prototype co-evolution governed by multi-objective property optimization and explicit uncertainty quantification. The key mechanistic workflow is as follows:
+
+1. Motif/Prototype Library Initialization: Seed the process with a diversity-maximized set of chemically valid crystal motifs (minimum/maximum atom count, known/novel arrangements) encoded as symmetry-adapted, injective graph descriptors (e.g., periodic Crystal Graphs with e3nn/Tensor Field Networks supporting rotational/translation/periodic invariance). Features include atomic type, site multiplicity, coordination environment, explicit boundary conditions, canonicalized via motif hashing.
+
+2. Hierarchical Assembly via Diffusion: Generate candidate superstructures iteratively through motif-level assembly, where each insertion or connection step is guided by a learned diffusion bridge conditioned on local/global stability (predicted site energies, charge neutrality, geometric strain). The generative step encodes all invariances and applies adaptive motif-prototype fusion, ensuring descriptor injectivity.
+
+3. Per-Step Constraint Enforcement: At each generative step, filter candidates through a hybrid hard/soft constraint mechanism. Hard filters (e.g., stoichiometry, atom overlaps, charge, geometrical minima/maxima) immediately reject infeasible assemblies; soft constraints assign scores using differentiable proxy functions (e.g., bond distance penalties, space group likelihood, symmetry fidelity). Protocols for ambiguous or multi-violation candidates—tabulated—specify fallback: rejection, soft penalization, or candidate resampling.
+
+4. Multi-Objective Optimization and Uncertainty Feedback: Employ a multi-objective evolutionary optimizer (e.g., NSGA-II) at every motif assembly stage, promoting candidates by Pareto front ranking over predicted formation energy (via ensemble property surrogates trained on partial/complete crystal fragments), uniqueness, and structural realism. At each step, per-candidate property predictions are logged with quantified uncertainty (e.g., surrogate ensemble variance, MAE empirical bounds); candidates exceeding uncertainty, validity, or diversity thresholds trigger fallback (library resampling, motif replacement, or flagged for human vetting). Detailed protocol for property surrogate training—including input feature selection, training on motif fragments/assemblies, validation error thresholds, and DFT cross-verification strategy—described in an online supplement.
+
+5. Dynamic Motif/Prototype Library Co-Evolution: Motif/prototype pools are adaptively refined throughout generation based on generative success/failure statistics, diversity saturation, or property optimization stagnation. Newly created high-performing motifs are candidate-seeded into the library, while dead-end motifs are deprecated. This adaptation is triggered by pre-set thresholds (e.g., <5% success over N steps, redundancy >X%) and is fully checkpointed.
+
+6. Logging, Reproducibility, and Benchmarking: All steps, decisions, candidate structures, and properties are checkpointed with unique identifiers (e.g., HDF5, JSON protocols). Logging granularity encompasses all motif/prototype insertions, constraint violations, surrogate/uncertainty scores, optimization parameters, and fallback events. Procedural workflow and model/code snapshots are designed for third-party replication; benchmarking includes ablation against current motif-level and atomic-level generative methods on standardized datasets.
+
+Failure criteria (e.g., recurrent constraint violation, persistent surrogate disagreement) and corresponding fallback/remediation protocols are explicitly detailed and documented at each stage. This systematic design ensures maximal clarity, novelty, methodological rigor, and reproducibility in generative crystalline material discovery.
+
+
+Hypothesis ID: 12
+Averaged Score: 3.25; Scores: [3, 3, 3, 4]
+Number of rounds: 1
+We hypothesize that a closed-loop generative pipeline with dynamically co-evolving descriptor and generative model space will enable the systematic discovery of stable, unique, novel, and realistic crystalline materials, outperforming static-descriptor models in representation and design flexibility. Our proposed mechanism consists of the following steps:
+
+1. Descriptor Initialization: Construct an initial descriptor space by concatenating SOAP vectors (cutoff 4-6 Å, 8-12 neighbors, using DScribe with defaults), Voronoi polyhedral statistics (computed via pymatgen, standard face-vertex decomposition), Wyckoff position encodings, and coordination/environment (CRYSTALNN or O'Keeffe algorithms, pymatgen), plus space-group numbers and composition vectors. Only descriptors with analytically-differentiable gradients are included for generative use.
+
+2. Generative Model: Train a denoising diffusion probabilistic model (e.g., DDPM) in descriptor space, with the architecture (layer widths, activation functions) selected based on prior optimal hyperparameter studies (e.g., see Kamal et al., 2023; Zhou et al., 2022). Input batches sized 128, trained using Adam optimizer with cosine annealing.
+
+3. Structure Decoding: Decode generated descriptors to candidate structures using a differentiable physics-constrained decoder. Constraints enforced during decoding include (i) charge neutrality by sum of formal oxidation states at all sites, (ii) minimum interatomic distance penalty with cutoff (1.3 × sum of covalent radii per pair), and (iii) preservation of periodicity—validated via reconstructing symmetry operations from output using spglib.
+
+4. Automated Evaluation: Score decoded crystals in mini-batches using the following:
+   - Uniqueness and novelty: Tanimoto similarity (<0.5) in descriptor space to all database seeds (using FAISS/KNN search).
+   - Stability: Surrogate ML model (CGCNN with 6-layer/128-width, trained on Materials Project data with MAE < 40 meV/atom, uncertainty quantified by 10-member ensemble variance) predicts formation energy; only candidates <30 meV/atom above hull accepted.
+   - Chemical validity: Charge neutrality, no unfilled valence, and ionic radii match (Shannon dataset).
+   Failed or unstable candidates are (a) filtered, (b) used as negative examples in re-training, and (c) clustered by descriptor-space similarity using DBSCAN (euclidean/mahalanobis metrics) to guide descriptor augmentation.
+
+5. Descriptor Adaptation: If generation novelty or stability plateaus (measured every 5 outer epochs), adapt descriptor set by either (i) pruning non-contributory features (L1 penalty and sensitivity ablation); (ii) augmenting with new graph-theoretic or polymorph-specific features identified from clustered failures. Descriptor freezing is employed: only a subset of descriptor weights or types are unfrozen/updated per iteration to maintain model stability, with progressive freezing or domain adaptation to minimize catastrophic forgetting.
+
+6. Model Retraining: Update the diffusion model and surrogate accordingly, using augmented training sets that include original data, synthetic data from successful generations, and perturbative augmentations (e.g., lattice jitter, atom swaps, symmetry-preserving distortions).
+
+7. Convergence: Iteratively repeat steps 2–6 until marginal improvements in novelty/stability scores are under ε (preset). Use ensemble of high-confidence DFT calculations on top-scoring candidates for final validation.
+
+This adaptive, feedback-driven process enables the generative model to discover increasingly appropriate descriptors for materials design, overcome weaknesses of statically-chosen representations, and maintain physical correctness, uniqueness, and novelty throughout iterative improvement.
+
+
+Hypothesis ID: 13
+Averaged Score: 3.25; Scores: [3, 3, 3, 4]
+Number of rounds: 3
+We hypothesize that a modular, symmetry-adapted generative pipeline—integrating (i) representation-space denoising diffusion models employing injectivity-regularized, physically meaningful descriptors (e.g., SOAP, graph Fourier, periodic motif graphs), (ii) sequential, constraint-guided motif and property sampling, and (iii) asynchronous surrogate+DFT recalibration and adaptive fallback mechanisms—will enable the reliable generation of stable, novel, unique, and realistic crystalline materials across diverse chemistries, including underexplored structural classes.
+
+Key design and procedural elements are as follows:
+1. **Descriptor Construction & Diffusion**:
+   - Use multi-channel, symmetry-adapted descriptors parametrized via SOAP (cutoff=5 Å, width=0.5 Å) and periodic graph motifs (validated motif size distribution, e.g., 3–8 atoms; Tanimoto diversity ≤0.8).
+   - Employ a 3D symmetry-equivariant U-Net as a diffusion backbone, operating in descriptor space with explicit consistency and injectivity regularization (contrastive/cycle-consistency loss with λ_inj=0.1).
+2. **Sequential Motif Sampling & Evolution**:
+   - For each generative sequence, sample space group, composition, and lattice parameters; select and mutate motifs from a co-evolving library, guided by diversity/property metrics.
+   - Dynamic motif replacement/insertion occurs upon ≤5% motif redundancy in current batch or >N failed property-filtered samples (N=10), using NSGA-II optimization (mutation rate=0.2, population=64).
+3. **Surrogate Filtering & Fallback Logic**:
+   - Each candidate is filtered via CGCNN/ensemble MAE ≤50 meV/atom on formation energy prediction. Out-of-domain chemistries are flagged if prediction uncertainty >3σ baseline, triggering early termination or fallback to low-fidelity surrogate-only screening.
+   - Structure inversion employs multi-start gradient reflux (10×), accepting candidates if cycle-consistency score >0.95; unresolved inversion triggers fallback motif search.
+4. **Surrogate+DFT Adaptive Feedback**:
+   - Top-K (K=8, diversity-balanced) candidates per 100 generated are submitted for DFT recalibration. Surrogate models are retrained monthly or upon >10% surrogate–DFT error drift.
+   - All selection/logging procedures use explicit API schemas (provided in repository; e.g., REST/JSON logs for each generative run, error tracebacks, batch resource consumption).
+5. **Benchmarking & Significance**:
+   - The pipeline is benchmarked on the generation of Li-rich cathodes and metastable perovskites, using a symmetry-constrained novelty index (SCNI) as a primary success metric, and ablation studies to quantify integration contributions.
+   - All generated structures, intermediate descriptors, and logs are made open-access to maximize reproducibility and community engagement.
+
+This framework, by structurally coupling descriptor-diffusion generative modeling with dynamic, property- and diversity-driven sequential motif updates and adaptive, uncertainty-aware fallback across the surrogate/DFT stack, delivers unprecedented explicitness, robustness, and extensibility for generative crystalline materials discovery.
+
+
+Hypothesis ID: 14
+Averaged Score: 3.25; Scores: [3, 3, 3, 4]
+Number of rounds: 2
+We propose a hierarchical generative framework for crystalline materials that combines motif-driven, property-conditioned sampling, invariant descriptor-space diffusion, and robust reconstructability and filtering protocols.
+
+1. **Motif Library and Sampling**
+   - Curate a motif (polyhedral/atomic cluster) library mined from the most diverse 5000 Materials Project entries (mp-ids specified in methods). Motif vectors encoded using DScribe’s SOAP (rcut=5Å, nmax=8, lmax=6, sigma=0.3, crossover=0.5) and graph fingerprints (node: atomic type+oxidation, edge: bond length/type, cutoff=4Å).
+   - Motif selection is probabilistically weighted by structural/chemical diversity (Shannon entropy within compositional windows) and gap rarity (k-means cluster occupancy; rare gaps prioritized above threshold θ=0.15).
+
+2. **Sequential Structure Assembly**
+   - A candidate crystal is grown layer-by-layer. Each step’s motif and its placement are conditioned by an ensemble CGCNN surrogate (n=5, RMSE target <0.10 eV/atom, trained/validated on a 70/15/15 split of MatBench-Crystal, including synthetic partial-structures for transferability).
+   - Motif acceptance requires: surrogate uncertainty σ_ensemble <0.08 eV/atom, no physically invalid bonding (bond length deviation >15% from trained mean), and stoichiometry compliance. If not met, fallback: motif or location resampled (sampling probability adaptively adjusted ±0.05 per consecutive rejection, bounded [0.05,0.30]).
+
+3. **Invariant Descriptor-Space Diffusion Refinement**
+   - Once a candidate passes motif/surrogate filters, its SOAP+Fourier descriptor (windowed in reciprocal space, kmax=4, window=0.2Å⁻¹ steps) is input to a UNet-based denoising diffusion model (timesteps=1000, latent dim=256, learning rate=1e-4, AdamW). Descriptor-space dynamics strictly preserve lattice periodicities and space group.
+   - Gradient-based (L-BFGS, max 500 iters, tol=1e-4) reconstruction from descriptor to atomic positions is performed; injectivity must exceed 98% on held-out test motifs (measured by structure RMSD <0.3Å and matching symmetry). Failure cycles invoke targeted motif mutation—single-motif perturbation in high-error slots, up to 3 retries, then rejection.
+
+4. **Multi-Objective Filtering and Benchmarking**
+   - Final structures filtered by: CGCNN ensemble stability (mean+σ <−3.1±0.08 eV/atom), uniqueness (graph-based Tanimoto dissimilarity >0.9 to any existing MP structure), injectivity (as above), and formation energy.
+   - Select Materials Project and Open Quantum Materials Database (OQMD) subsets for post hoc benchmarking. All source code, augmenting scripts, fallback logs, and hyperparameter files to be published.
+   - Representative DFT validation protocols: VASP code, PBEsol XC, 350 eV cutoff, Γ-centered k-mesh (target: 25 k-points/Å³), spin-unpolarized defaults, single-point and volume-relaxed runs.
+
+5. **Uncertainty and Diversity Management**
+   - Surrogates use Deep Ensemble dropout + MC-ensemble. Diversity is ensured by (a) entropy-weighted sampling, (b) explicit coverage optimization: maximizing Fiedler value across generated structure graph.
+
+**Comparative Table and Applications**
+Table in supplement directly contrasts: VAE/GAN/diffusion-only/fragment-based/AL/surrogate-only baselines, with ablation benchmarks outlined. The method is exemplified via design of low-formation-energy, previously unsynthesizable mixed-anion perovskites and edge-case zeolitic nets, uniquely enabled by joint motif-diffusion/injective design.
+
+All code, benchmarks, and validation data to be released for reproducibility.
+
+
+Hypothesis ID: 15
+Averaged Score: 3.25; Scores: [3, 3, 3, 4]
+Number of rounds: 3
+We hypothesize that a hybrid, modular generative pipeline integrating motif-level, space group-conditioned discrete sampling with atomic-coordinate diffusion refinement—each module operating under explicitly protocolized, symmetry-invariant, and physically grounded constraints—enables the generation of stable, unique, and realistic crystalline materials, surpassing previous isolated or loosely structured generative approaches.
+
+Methodology:
+
+1. Motif Library & Discrete Sampling:
+- Curate a motif library from experimentally confirmed crystalline materials (Materials Project, ICSD), ensuring chemical and functional diversity. Define explicit encoding of motifs and augment with clustering of crystal environments. Protocolize inclusion/exclusion, uniqueness, dimensionality, and bonding constraints. 
+- Sample candidate space groups, composition vectors, and initial lattice parameters using a graph-based generative model (e.g., SchNet/ALIGNN, with specified nodes, embedding sizes, activation choices). Motif selection and placement are directed by beam search (width and depth explicitly parameterized), considering spatial, stoichiometric, and valence constraints.
+
+2. Surrogate Property Gating:
+- Employ an ensembled GNN-based property predictor for formation energy and other relevant targets, with uncertainty estimates via Bayesian dropout or ensemble variance. Explicit thresholds for acceptance, uncertainty cutoffs, and property range are defined in tabular protocol. Only candidates passing property and uncertainty gates proceed.
+
+3. Atomic Diffusion Refinement:
+- Each candidate is further relaxed at the atomic level using a symmetry-adapted diffusion model (e.g., E(3)/SE(3)-equivariant score-based GNNs or Transformer), where diffusion step counts, noise schedules, and architectural choices are protocolized (layers, embedding, kernel types). Periodic boundary conditions, equivariance, and bonding preferences are hard-enforced at each step. Physical invariances (permutation, rotation, translation, periodicity) are algorithmically tested and enforced between steps.
+
+4. Fallback & Repair Logic:
+- For failures in surrogate evaluation, symmetry, or reconstructibility, trigger protocolized fallback (e.g., alternative motif arrangements, increase in beam width, atomic-level coordinate repair, or DFT relaxation with specified functionals and convergence parameters). Computational resource allocation for fallback is bounded and batch-scheduled.
+
+5. Uniqueness & Reconstructibility:
+- Structures are fingerprinted for uniqueness with hashed graph metrics (e.g., Sine matrix, SOAP, kernel graph isomorphism) and checked for motif-to-atomic back-mappability by an explicit algorithm. All steps have operational fallback routines for mismatch resolution.
+
+6. Validation & Benchmarking:
+- Pipeline is configured for open-source deployment; benchmarking is performed against MatBench and Materials Project, with ablation of each module’s contribution and error modes logged.
+
+A detailed protocol supplement (including algorithmic flowcharts, hyperparameter tables, gating thresholds, and fallback state diagrams) ensures operational transparency and reproducibility. Novelty is established by a direct comparison matrix with all known SOTA generative models. This protocolized, multi-scale, and error-tolerant pipeline offers a comprehensive platform for stable crystalline materials generation.
+
+
+Hypothesis ID: 16
+Averaged Score: 3.0; Scores: [3, 3, 3, 3]
+Number of rounds: 3
+We propose a hybrid generative framework for crystalline materials capable of producing stable, unique, and realistic candidates by integrating descriptor-space diffusion, motif-adaptive physical filtering, and dynamic property conditioning as follows:
+
+1. Descriptor Construction & Injectivity Validation:
+- Encode crystal structures with a multi-level descriptor hierarchy: (a) local atomic environment descriptors (SOAP, cutoff radius ≥ 6 Å, l_max=8), (b) symmetry-respecting global features (Fourier descriptors), (c) tailored graph-based bond/topology features.
+- Validate injectivity by pilot inverting descriptors on a held-out validation set; quantify and threshold atomic position ambiguity. Select regularization hyperparameters for uniquely invertible mappings.
+
+2. Diffusion Model Sampling:
+- Train a DDPM (score-based) generative model (U-Net architecture, latent dim 256–512, 200 noise steps) on descriptors of DFT-relaxed structures (from Materials Project/OQMD).
+- Condition latent diffusion on composition and/or property surrogate gradients.
+- Sample descriptors, ensuring permutation, translation, rotation, and periodic boundary invariance are preserved.
+
+3. Motif Library & Plug-In Mechanism:
+- Build a curated motif library from training structures with clustering by bonding/coordination pattern.
+- In sampled descriptors, identify subgraphs/islands eligible for motif replacement using graph isomorphism augmented by geometric tolerance checks (max RMSD <0.2 Å, bonding mismatches <1 per site).
+- Replace subgraphs with library motifs via constrained local optimization (L-BFGS; fix lattice vectors, relax internal atomic positions; energy decrease threshold ΔE <5 meV/atom).
+- Handle partial matches with iterative decomposition and residue archiving for potential generation or model retraining.
+
+4. Surrogate Property Modeling & Dynamic Feedback:
+- Train graph neural network surrogates (5-layer SchNet, with dropout and validated uncertainty calibration) for key properties (stability, bandgap, etc.) using 80/10/10 splits.
+- Compute property gradients to bias sampling and motif selection, with dynamic adjustment via adaptive thresholding (triggered when surrogate uncertainty > preset tolerance, e.g., σ > 0.15 eV for stability).
+- Use RL-based reward shaping or probabilistic reweighting for composition- and property-aware candidate generation.
+
+5. Multi-Stage Filtering & Fallback Protocol:
+- Apply sequential filters: (a) symmetry and periodicity checks, (b) chemical valence/charge balance, (c) property windowing (only retain candidates passing all surrogate-based thresholds, with fallback to DFT for ambiguous/uncertain predictions).
+- Archive failure cases for prioritized retraining, exclusion, or expert review; failed backmapping structures are flagged for human-guided troubleshooting and descriptor set refinement.
+
+6. DFT-in-the-Loop Validation:
+- Schedule DFT calculations (VASP, PBE functional, cutoff 520 eV) for top-N novel candidates by predicted property or uncertainty bins. Integrate DFT feedback for active surrogate retraining.
+
+7. Benchmarking & Scalability:
+- Use standard splits and property windows on established datasets. Track resource usage; for large-scale training employ distributed DDPM and motif libraries with memory-mapped storage. Address edge cases (large cells, rare space groups) with explicit tags for further ablation.
+
+8. Application Scope:
+- Apply the pipeline to wide-bandgap semiconductor and high-throughput catalyst discovery. Release code, motif sets, and reproducibility artifacts.
+
+
+Hypothesis ID: 17
+Averaged Score: 3.0; Scores: [3, 3, 3, 3]
+Number of rounds: 2
+We propose a modular, representation-space generative framework for crystalline materials design, explicitly tailored to produce stable, unique, and novel crystals while robustly respecting symmetry, periodicity, and structural realism. The methodology consists of six key stages:
+
+1. Descriptor Construction & Selection:
+   - Build a hierarchy of symmetry- and periodicity-invariant descriptors: SOAP (with variable cutoff radius and basis parameters), adjacency matrices, and global Fourier/Wigner descriptors.
+   - Use a decision table: For each material class (e.g., metal, oxide, intermetallic), assign primary descriptor(s) based on prior reconstruction injectivity analysis. Classes or property targets are mapped to descriptors rationalized by past ablation and performance.
+   - All descriptor sets are subjected to periodic injectivity testing (once per material subclass or when property regime shifts). Failures trigger descriptor augmentation or parameter tuning.
+
+2. Representation-Space Diffusion and Staged Conditional Generation:
+   - Employ a representation-space denoising diffusion model (UNet backbone, latent size 128–512, T=1000 steps), operating within primary descriptor space.
+   - Sequential conditional sampling: 
+       i) Space group (sampled by conditional prior based on target property statistics); 
+      ii) Composition (element library filtered by property surrogate); 
+     iii) Lattice parameters; 
+      iv) Motif assignment (local motif module, selected according to class-specific rules).
+
+3. Surrogate Property Prediction & Uncertainty Calibration:
+   - For each candidate, apply a 5-model ensemble CGCNN surrogate (with MC dropout at p=0.2), outputting median and variance predictions for formation energy and/or target property.
+   - Surrogate ensemble variance is used to scale candidate loss and priority (e.g., high-variance predictions are assigned lower priority/lower loss weight via a sigmoid function; scaling threshold empirically set per property).
+   - Surrogate is retrained or bootstrapped with front-runner DFT-validated data in case of domain or class shift.
+
+4. Adaptive Loss Weighting & Filtering:
+   - Incorporate property surrogate output directly into the generative loss (adaptive weighting: L_total = L_diffusion + α*(uncertainty-scaled property error)), with α dynamically set by property confidence.
+   - Hard constraints (e.g., max atomic number, lattice sanity checks) are imposed at each generation stage.
+
+5. Evolutionary Fallback Exploration:
+   - If generation stalls or yields high-uncertainty/unstable predictions, fallback genetic search is initialized: lattice jitter (0.05–0.2 Å), motif swap (top-5 frequency), random composition swap (max 10%), and uniform or attribute-level crossover are used with fixed mutation rates.
+   - All parameters and operators are tabulated and logged; fallback success/failure and diversity metrics tracked per cycle.
+
+6. Validation & Comparative Analysis:
+   - All results undergo DFT relaxation (up to budgeted N per cycle), with tracking of stability windows, diversity measures, descriptor reconstruction errors, and pass/fail rates.
+   - Ablation studies are run: modules (descriptor class, surrogate, fallback, uncertainty adaptation) are systematically toggled off to assess necessity.
+   - Comparative tables document modules and outcomes against leading crystal generators, highlighting distinctive impacts (e.g., number of high-confidence novel structures).
+
+Reproducibility is ensured via exhaustive protocol/pseudocode documentation, tabulated parameter sets for all modules, and full data/model artifact deposition.
+
+
+Hypothesis ID: 18
+Averaged Score: 3.0; Scores: [3, 3, 3, 3]
+Number of rounds: 3
+We hypothesize that integrating an E(3)-equivariant, symmetry- and periodicity-preserving descriptor-space diffusion model with explicitly hierarchical motif/lattice parameterization, energy-guided denoising, and robust fallback search, yields a generative framework capable of consistently producing stable, unique, and realistic crystalline materials. The generative workflow includes the following modules:
+
+1. Representation & Descriptor Space: Use an E(3)-equivariant GNN (6 layers, hidden size 256, GELU activation, batch normalization) to encode crystal graphs into a periodic, symmetry-invariant continuous representation. Input: atomic species, fractional coordinates, lattice matrix. Descriptor invariances are guaranteed by explicit loss penalties (rotation, translation, permutation) and periodicity-aware pooling operations.
+
+2. Diffusion Model: Apply a time-conditioned denoising diffusion (UNet-style, 3D convolutional blocks) in descriptor space. Forward noise schedule: beta=(0.1,2.0), T=1000 steps. Sampling involves property-conditional guidance; property targets (formation energy, band gap, stability) are numerically encoded as standardized scalars derived empirically from Materials Project/OQMD datasets. Conditioning bandwidth is [median-3σ, median+3σ], standards computed per-property from training data. Control random seeds and implement hardware stacks: CUDA 12, PyTorch 2.1, NVIDIA A100.
+
+3. Energy-guided Filtering: Candidate structures are passed through a surrogate energy model (M3GNet), trained and validated per-material class (80/10/10 data split, early stopping Δval_loss<0.01 for 8 epochs). Surrogate uncertainty (ensemble stddev > σ_thresh=0.15 eV/atom) triggers DFT fallback or structure rejection. Out-of-distribution (OOD) detection (via Mahalanobis distance, z>3 flagged as OOD) guides triaging.
+
+4. Hierarchical Motif/Lattice Priors: Candidate generation follows staged motif and lattice parameter selection: lattice parameters randomly sampled (Gaussian noise σ_lat=0.025 Å, bounded by physical lattice constraints), motifs proposed via Gumbel-softmax sampling across ligand/template libraries. Reassignment occurs with p_reasgn=0.10 when uniqueness checks (graph isomorphism, RMSD<0.15Å) fail.
+
+5. Fallback Evolutionary Search: Evolution triggers if acceptance <5% in 100 samples, or N_invalid >20. Mutations: Gaussian perturbation σ_mut=0.02 Å, atomic swaps, motif recombination (selection weighted by property gradients). Diversity tracking: fingerprint entropy target >0.75 (Shannon entropy of SOAP feature bins); repeated candidates flagged and down-weighted.
+
+6. Validation & Reproducibility: Output candidates are benchmarked on RMSD, predicted stability, and novelty (Tanimoto/SOAP/distance metrics). Random seeds fixed, code versioned with Git/Singularity images, full hyperparameter/config/seed tables included in Supplement.
+
+Key novelty: The explicit gating between E(3)-invariant diffusion, energy-guided filtering, and hierarchical evolutionary fallback is not present in prior crystal generative models. Each module is operationally specified for reproducibility. Benchmarking includes ablation of every module versus baseline VAE/graph/diffusion models. Comprehensive resource estimates (GPU-hours/module), fallback routes, failure triggers, and uniqueness metrics are operationally predefined.
+
+
+Hypothesis ID: 19
+Averaged Score: 3.0; Scores: [3, 3, 3, 3]
+Number of rounds: 1
+Refined Hypothesis: 
+
+We hypothesize that a modular, motif-based generative framework, with workflow-level constraint enforcement, dynamic motif library evolution, and hybrid human/algorithm-in-the-loop optimization, will enable the synthesis of stable, unique, novel, and realistic crystalline materials, outperforming fixed-template or single-objective crystal generation approaches.
+
+Methodological Overview (Stepwise):
+
+1. Motif Library Initialization and Maintenance:
+   - Begin with a curated motif set from ICSD and Materials Project, represented by SOAP and symmetry/elemental descriptors.
+   - Dynamically expand the library each generation cycle: mine failed generations by clustering substructures (e.g., DBSCAN on motif fingerprints, min cluster size=5, cosine distance <0.25) to identify recurrent, stable, and synthesizable subunits. Blacklist motifs with high instability or repeated violations.
+   - Motif addition/removal thresholds and clustering parameters are tunable according to diversity and stability metrics across the population.
+
+2. Stepwise Crystal Assembly:
+   - Sequentially assemble candidate crystals by sampling motifs based on target space group, lattice type, and candidate property profiles.
+   - At each step, apply explicit, parameterized constraint projections: charge neutrality, space group compatibility, bond length/angle limits, and physical feasibility via rule-based filters.
+   - Use algorithmic diversity control: impose minimum structure Tanimoto dissimilarity (e.g., >0.85) and uniqueness thresholds within each batch.
+
+3. Property Evaluation and Multi-Objective Screening:
+   - Predict intermediate and final structure properties using an ensemble of surrogate models (5× CGCNN variant, input: local/neighbor descriptors + motif fingerprints).
+   - Surrogate ensemble uncertainty (std. dev. across predictions) triggers fallback to higher-fidelity DFT calculations if uncertainty >0.12 eV/atom.
+   - Apply a Pareto front optimizer (e.g., NSGA-II) to jointly select for stability (formation energy <–0.2 eV/atom), predicted synthesizability (using a calibrated score), and diversity.
+
+4. Rollback, Fallback, and Intervention Mechanisms:
+   - If constraints are violated or surrogates are highly uncertain/contradictory, execute structured rollback to previous assembly states; register problematic motifs for blacklisting.
+   - For high-potential but uncertain constructs, queue candidates for expert-in-the-loop review (via GUI prioritization system or automated uncertainty alert) for manual acceptance/rejection or constraint refinement.
+   - Resource adaptation: monitor DFT queue length and dynamically throttle batch size/motif complexity if resource bottlenecks are detected, with recalibration every 50 generations.
+
+5. Validation, Benchmarking, and Ablation:
+   - Benchmark on large, diverse test sets (n>1,000), directly comparing to state-of-the-art (Crystal-GFN, ModularGAN, STRUM, CDVAE) on uniqueness, diversity (mean Tanimoto), and stability metrics.
+   - Run ablations disabling dynamic motif expansion/expert intervention to isolate contributions.
+
+6. Bridging to Experiment:
+   - Select final candidates for DFT/phonon validation of stability and known synthesizability proxies.
+   - Propose direct collaboration with experimentalists to synthesize 1–2 top-scoring novel motifs/materials for real-world validation, establishing an iterative simulation–experiment loop.
+
+This framework formalizes and operationalizes constraint-aware, multi-objective crystalline materials generation, combining dynamic motif evolution, real-time intervention, and rigorous benchmarking for direct in silico and future laboratory application.
+
+
+Hypothesis ID: 20
+Averaged Score: 3.0; Scores: [3, 3, 3, 3]
+Number of rounds: 2
+We propose a modular, feedback-driven generative pipeline for crystalline materials, uniquely integrating motif-based hierarchical assembly, differentiable diffusion refinement, and explicit uncertainty-aware, multi-objective optimization. Our design follows: 
+
+1. Motif Library Construction:
+   - Motifs (building blocks) are algorithmically extracted from ICSD/MatBench using automated clustering of atomic environments by spectral graph clustering, controlling for space group, coordination, oxidation state, and chemical composition (audited by Pymatgen and chemical rules).
+   - Library diversity maximized via kernel-based sampling (Featurized-Voronoi/OP-encoded environment distance) and enforced chemical validity. Motifs are stored with metadata (space group, valency, connectivity).
+
+2. Generative Assembly (Hierarchical):
+   - Assembly proceeds in three stages:
+       a. Motif Sampling: Selects motif sequences via Markov Chain Monte Carlo or RL, guided by target distributions (composition, space group, property priors).
+       b. Motif Attachment: Connects motifs under physical and chemical constraints (valency, minimal atomic clash, topological connectivity, space group preset).
+       c. Assembly Filtering: Outputs partial structures passing chemical/physical screening (e.g., minimum/maximum atom count, lattice sanity, Pymatgen checks).
+   - Explicit workflow diagram and reproducible pseudocode (Python, PyTorch/ASE) govern each decision point, with fallback logic (motif mutation/motif expansion with search complexity logging) engaged after failure.
+
+3. Diffusion-Based Refinement:
+   - A periodicity and symmetry-respecting DDPM (score-based generative model) further refines candidate structures; input features include motif identities, positions, lattice vectors, and atom types.
+   - Rotational, permutational, and translational invariances are preserved by equivariant neural layers (e.g., e3nn-based architectures). Model hyperparameters and training protocols are publicized; 100–150 refinement steps per structure, with checkpoints and grid search over learning rates, batch sizes.
+
+4. Uncertainty-Aware Multi-Objective Filtering:
+   - Surrogate property prediction by an ensemble of CGCNN and GFN-trained networks (specified hyperparameters, MAE validation, calibration procedures).
+   - Candidates are Pareto-optimized for stability (e.g., predicted formation energy), novelty, synthesizability, and uniqueness. Uncertainty from model ensembles governs confidence thresholds for progression or fallback.
+   - Fallback triggers motif mutation/expansion, with explicit recursive logic, until diversity/quality metrics are met.
+
+5. Synthesizability and Novelty Filtering:
+   - Retrosynthesis/synthesizability estimation integrates ML-based predictors trained on reaction networks and classifiers of known phases (see Nature Comm. 2021); distance in learned descriptor space must exceed dataset threshold for novelty.
+   - Rule-based or ML retrosynthesis filters are deployed, with open-source baseline and estimator code.
+
+6. Traceability, Reproducibility, and Data Sharing:
+   - All decisions, intermediate generations, model parameters, and evaluation logs are stored in JSON/Jupyter, with final and intermediate structures (CIF) published to Zenodo/MaterialsCloud, facilitating full reproducibility.
+   - Workflow, pseudocode, and minimal working code examples (Python) are provided as supplements.
+
+This hybrid pipeline represents the first to operationalize motif-guided assembly, DDPM refinement, explicit uncertainty ensembles, and fallback-driven feedback in crystal generative design, setting a benchmark for reproducibility and enhancing the discovery of synthesizable, novel crystalline materials.
+
+
+Hypothesis ID: 21
+Averaged Score: 2.75; Scores: [3, 3, 3, 2]
+Number of rounds: 1
+Refined Hypothesis:
+
+We propose a differentiable generative model—Differentiable Constraint-Satisfaction Crystal Generator 2 (DCG2)—for de novo generation of stable, unique, novel, and realistic crystalline materials. The approach integrates a backbone crystal generator (e.g., VAE or equivariant normalizing flow) with a Differentiable Constraint Satisfaction Layer (DCSL) that enforces multiple physical, chemical, and symmetry constraints during the generative process via gradient-based optimization.
+
+1. **Model Structure & Training Data:**
+- **Generator:** Crystal structure generator parameterized as an equivariant VAE or flow addressing periodic, translation, and rotation invariance. Backbone: 6–12 layers, 128-dim embeddings, GELU activations.
+- **Training/Benchmarking:** Train on Materials Project and OQMD datasets, random 80/10/10 train/val/test splits. Cell size limit: ≤40 atoms/cell (current), extensible via hierarchical/patch-based strategies.
+- **Surrogate energy model:** Pre-trained GNN surrogate (e.g., 6-layer SchNet or DimeNet, cutoff 5 Å, trained on 50k DFT structures) to estimate formation energy.
+- **Bonding classifier:** 3-layer MLP bond-type classifier trained on ground-truth DFT bond labels (>100k bonds).
+
+2. **Differentiable Constraint Satisfaction:** At each generation step, DCSL computes a composite loss:
+
+L_total = α L_energy + β L_bond + γ L_sym + δ L_div
+
+- **L_energy:** Soft surrogate energy (GNN-predicted formation energy, MSE from target < −0.5 eV/atom).
+- **L_bond:** Soft/max-margin penalty for unsatisfied/nearly satisfied chemical coordination rules (by bond classifier output).
+- **L_sym:** Group-invariant penalty; e.g., commutator-based deviation from target space group (selectable: cubic, hexagonal, tetragonal; default cubic/hexagonal via detector; fallback: non-differentiable space group assignment triggers filtering during candidate selection).
+- **L_div:** Diversity via determinantal point process (DPP) kernel on latent/invariant crystal fingerprints (kernel: RBF, σ=0.2).
+
+- **Constraint weights {α, β, γ, δ}:** Default: {1.0, 0.5, 0.5, 0.3}. Set via grid search on val-set, or optionally adapt via hypergradient meta-learning: weights updated via outer-loop optimization to maximize constraint satisfaction/discovery rates on validation set.
+- **Adaptive constraint weighting:** Modulates influence of each term per generation/candidate, dynamically detects constraint violation rates, and schedules weight adjustment accordingly.
+- **Fallbacks:** If hard constraints (e.g., exact space group) cannot be differentiated, a two-stage process is used: (1) relax constraints via differentiable proxies, (2) final non-gradient filter/rejection applied post-generation.
+- **Optimization:** Generator parameters and structure coordinates updated through composite loss; maximum refinement steps per candidate: 50; total batch computational budget: <2 GPU-hr/epoch (A100).
+
+3. **Validation & Benchmarking:**
+- **Dataset splits and property benchmarks (Materials Project, OQMD; metrics: structure reconstruction, formation energy gap, uniqueness, and novelty) provided.
+- **Ablation studies:** Evaluate effect of each constraint module and adaptive weighting with fixed-weight baseline.
+- **Constraint conflict analysis:** Monitor co-violation rate of conflicting penalties; schedule stronger weight decay or disjoint optimization if detected >10%.
+- **Scalability:** Monitor computational scaling to larger cells (>40 atoms), propose future hierarchical expansion.
+
+4. **Comparative & Literature Context:**
+- Compare to recent (2022–2024) crystal VAEs, GANs, and equivariant diffusion models: highlight that DCG2 uniquely applies simultaneously differentiable, modular, and adaptively weighted multi-constraint satisfaction during generation, not just via post hoc scoring or filtering. Include comparison table in codebase/publication.
+
+The proposed framework is fully reproducible, modular, and extensible; all architectural and algorithmic components, datasets, and constraint mechanisms are specified for immediate computational testing and benchmarking.
+
+
+Hypothesis ID: 22
+Averaged Score: 2.5; Scores: [3, 3, 2, 2]
+Number of rounds: 1
+We hypothesize that a generative framework termed Symmetry- and Bonding-Constrained Crystal Diffusion Model (SBCCDM) can generate stable, unique, novel, and realistic crystalline materials by explicitly integrating crystallographic symmetry, local bonding motifs, energy minimization, and property conditioning throughout the generation process. The proposed methodology consists of the following components:
+
+1. Data Scope and Representation: The input space comprises inorganic crystalline materials with up to 40 atoms per primitive cell, sampled from the Materials Project and OQMD databases. Each structure is encoded as a periodic graph using atom types and positions, periodic boundary conditions (PBC), and lattice parameters.
+
+2. Encoder/Decoder: The encoder is an E(3)-equivariant message-passing graph neural network (GNN) (default: e3nn or MACE), which produces latent vectors for structure and composition. The decoder is a symmetry-preserving diffusion model that iteratively refines random initial structures in T=1000 noise steps (cosine schedule), generating atomic coordinates, types, and lattice parameters. Decoding ensures invariance to global translation, permutation, rotation, and explicit PBC.
+
+3. Energy and Bonding Constraints: At each diffusion step, an energy surrogate (default: SchNet trained on DFT-SCAN data, validated against 5% of the materials withheld) estimates local and global energies. A local bonding module tabulates bond valence penalties against empirical thresholds for each atomic pair (e.g., using Shannon radii and the bond valence method), enforcing motif satisfaction. The total loss L = w1*L_energy + w2*L_bond + w3*L_property + w4*L_diversity, where weights are initialized (e.g., [1, 1, 0.2, 0.01]) and adaptively tuned via a softmax temperature scheduler based on validation set improvements.
+
+4. Property and Novelty Optimization: A property predictor (e.g., CGCNN, fine-tuned per property of interest—bandgap, stability, magnetism) is trained on the same data and used within the generative loss (L_property). For targeted optimization, a model-based RL policy (offline Q-learning with prioritized experience replay from property-predictor-driven rewards) adjusts generation trajectories. Novelty/diversity (L_diversity) penalizes structures similar to the training set (computed via fingerprint-based similarity, e.g., Voronoi tessellation descriptors).
+
+5. Integration and Training: During training, gradients from all loss components are backpropagated jointly. The bonding and energy modules inject constraints at every diffusion timestep (not only at the endpoint). Pseudocode and computational graphs are provided for reproducibility. Default hyperparameters and reference dataset splits are explicitly described. A full ablation protocol—removing energy, bonding, or property branches individually—quantifies their contribution.
+
+6. Post-Generation Filtering and Validation: Generated candidates are screened for basic physical plausibility (charge neutrality, valence satisfaction, composition rules). Unstable/unphysical samples are discarded. Viable candidates are further refined using single-point DFT (using VASP: PAW, PBE, 500 eV cutoff, 0.01 eV/Å force threshold) to confirm energy minima. Out-of-distribution candidates are flagged and subjected to deeper analysis.
+
+7. Boundaries: This hypothesis excludes organic, hybrid organic-inorganic, and amorphous materials; it addresses only inorganic, periodic crystals with stoichiometric compositions. Fully automated pipelines and robustness checks ensure recovery or warning in the case of surrogate/model failures. Detailed schematic and table of comparative prior art included in documentation.
+
+
+Hypothesis ID: 23
+Averaged Score: 2.5; Scores: [3, 2, 2, 3]
+Number of rounds: 1
+We propose a generative autoregressive framework for crystalline materials that produces stable, unique, novel, and physically realistic crystals by integrating stepwise, uncertainty-aware surrogate feedback, explicit diversity tracking, and strict constraint enforcement throughout the generation sequence:
+
+1. Generator Model: A deep autoregressive neural network sequentially samples crystal features—space group, composition (elemental counts/types), and lattice parameters—constructing structures in a defined order.
+
+2. Intermediate Featurization: At each generation step, the partially constructed crystal is featurized by designating a special mask token for unassigned atoms and lattice sites; all numeric site features are padded with default physically plausible values. For surrogate compatibility, atomic-type embeddings for missing positions are set to zero or a reserved mask vector, and lattice tensors are padded to maximum unit cell dimension.
+
+3. Surrogate Property Feedback: A GNN-based regression surrogate (e.g., SchNet/CGCNN, trained on Materials Project/MatBench data, MAE < 0.07 eV/atom) estimates formation energy for intermediate crystals. Surrogate uncertainty is quantified via an ensemble or Bayesian dropout, providing predictive mean and standard deviation.
+
+4. Logit and Reward Shaping: The generation probability for each next crystal feature is modulated by the surrogate prediction using the formula:
+
+  p_i = softmax[(l_i + α·S(surr_pred,uncert)) / τ]
+
+  where l_i is the base logit, S(surr_pred,uncert) is an affine-transformed surrogate score (e.g., negative formation energy penalized by uncertainty), α is user-tunable (default 0.5), and τ (temperature) controls exploration (default 1.0; allowed range 0.2–2.0). The surrogate score can be set to zero for high-uncertainty predictions, effectively blocking uncertain extensions.
+
+5. Diversity and Uniqueness: After each structure update, a SOAP descriptor vector is computed and compared to a memory-efficient, dynamically pruned hash table of previous structures (cosine similarity threshold: 0.85, update every 100 generations), avoiding redundancy and maintaining novelty.
+
+6. Constraint Handling: Physical plausibility is enforced by explicit geometric/chemical rules (distance/bond-angle screening, strict charge balance for selected chemistries). Stepwise rejection triggers either rollback (full undo and resampling) or local resampling (partial modification), governed by a user-defined parameter (default: rollback depth 1).
+
+7. Validation & Benchmarking: Proposals are benchmarked on MatBench formation energy, bandgap, and elasticity splits. Final candidates are filtered by surrogate thresholds, checked for experimental realization in ICSD, then passed to DFT for computational validation (throughput estimate: 50–100/week, batch-queued).
+
+8. Comparison and Ablation: An ablated baseline, which applies surrogate filtering post hoc only, is run in parallel. Head-to-head statistical analyses compare composition diversity, stability, and novelty rates to isolate improvements from stepwise feedback.
+
+Careful record-keeping of all user-tunable hyperparameters (α, τ, novelty thresholds, surrogate architecture details), their default settings, and motivation from preliminary pilot runs ensures reproducibility. Limitations—including surrogate bias on intermediates, computational scaling of feedback frequency, and the possibility of false negatively/positively flagged candidates—are empirically tested and reported.
+
+
