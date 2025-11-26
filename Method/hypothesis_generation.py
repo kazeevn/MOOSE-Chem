@@ -3,7 +3,7 @@ import numpy as np
 from openai import OpenAI, AzureOpenAI
 from google import genai
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from Method.utils import load_chem_annotation, load_dict_title_2_abstract, load_found_inspirations, get_item_from_dict_with_very_similar_but_not_exact_key, instruction_prompts, llm_generation, llm_generation_structured, recover_generated_title_to_exact_version_of_title, load_groundtruth_inspirations_as_screened_inspirations, exchange_order_in_list, HypothesisResponse, RefinedHypothesisResponse
+from Method.utils import load_chem_annotation, load_dict_title_2_abstract, load_found_inspirations, get_item_from_dict_with_very_similar_but_not_exact_key, instruction_prompts, llm_generation, llm_generation_structured, recover_generated_title_to_exact_version_of_title, load_groundtruth_inspirations_as_screened_inspirations, exchange_order_in_list, HypothesisResponse, RefinedHypothesisResponse, ReviewerEvaluation
 from Method.logging_utils import setup_logger
 
 
@@ -841,26 +841,18 @@ class HypothesisGenerationEA(object):
     # score_collection: ['score0', 'score1', 'score2', 'score3']
     # score_reason_collection: ['reason0', 'reason1', 'reason2', 'reason3']
     def hypothesis_evaluation(self, cur_hypothesis_and_reasoning_process):
-        # cur_hypothesis_prompt: for evaluation, we only need the hypothesis itself, but not reasoning process
-        cur_hypothesis_prompt = "hypothesis: {}.".format(cur_hypothesis_and_reasoning_process[0])
         # instructions
-        prompts = instruction_prompts("four_aspects_self_numerical_evaluation")
-        assert len(prompts) == 2
-        full_prompt = prompts[0] + cur_hypothesis_prompt + prompts[1]
-        # generation
-        while True:
-            try:
-                score_text = llm_generation(full_prompt, self.args.model_name, self.client, api_type=self.args.api_type)
-                score_collection, score_reason_collection, if_successful = extract_scores(score_text)
-                assert if_successful == True
-                break
-            except AssertionError as e:
-                print(f"Warning: extract_scores failed, score_text: {score_text}")
-                # if the format
-                print("AssertionError: {}, try again..".format(e))
-            except Exception as e:
-                print(f"Warning: extract_scores failed, score_text: {score_text}")
-                print("Exception: {}, try again..".format(e))
+        prompts = instruction_prompts("four_aspects_self_numerical_evaluation_structured")
+        assert len(prompts) == 1
+        assert prompts[0]['role'] == 'system'
+        # cur_hypothesis_prompt: for evaluation, we only need the hypothesis itself, but not reasoning process
+        prompts.append({"role": "user", "content": cur_hypothesis_and_reasoning_process[0]})
+        scores = llm_generation_structured(prompts, self.args.model_name, self.client, template=ReviewerEvaluation, api_type=self.args.api_type)
+        # Legacy compatibility
+        score_rubrics = ["validity", "novelty", "significance", "specificity"]
+        fields = scores.model_dump()
+        score_collection = [fields[r]["score"] for r in score_rubrics]
+        score_reason_collection = [fields[r]["reason"] for r in score_rubrics]
         return score_collection, score_reason_collection
     
 

@@ -127,7 +127,16 @@ def instruction_prompts(module_name, more_info=None):
                     The hypothesis is: \n
                    ''', "\nPlease give a response to the initial question on determining whether the research hypothesis need to be more specific, novel, and valid. If so, what are your advice to be more specific, novel, and valid?"]
     elif module_name == "four_aspects_checking_and_extra_knowledge":
-        prompts = [f"You are assisting {DISCIPLINE} scientists on helping providing feedback to their newly proposed research hypothesis, targetting at publishing the research on a top {DISCIPLINE} venue like Nature or Science. You know, to publish a research in Nature or NeurIPS, the hypothesis must be (1) specific enough, which means the research hypothesis should contain enough details of the method for the researchers to know at least what the method is without any confusion or misunderstanding. For example, if to introduce a new concept into a method for the hypothesis, the hypothesis shouldn't be only about 'what the new concept is', but 'how specifically the new concept can be leveraged and integrated to the method'. If it is within your ability, please also provide details on the parameters of the hypothesis, so that the researchers can directly test the hypothesis in their lab; (2) novel enough, which means it should not have been proposed by any existing literature before; (3) completely valid, which means a real {DISCIPLINE} experiments should be able to verify the hypothesis; (4) significant in research, which means it is more preferable for it to have a relatively significant impact in research community. Currently we don't have resources for real lab experiments, so please try your best to analyze on validness based on your own knowledge and understanding. \nPlease try your best to give the {DISCIPLINE} scientists some feedbacks on whether the hypothesis needs to be more specific, novel, valid, or significant. If so, what are your advice to be more specific, novel, valid, or significant? Please directly answer this question. In addition, if the hypothesis needs some extra knowledge for it to be more complete, valid, or significant in research, please also try to provide (recall) them (if the hypothesis is already complete, it is not necessary to provide external knowledge). Please note that your feedback to these aspects should focus on the methodology in the hypothesis, but not how to add descriptions of its novelty, validness, or significance. \nThe hypothesis is: \n", "\nPlease give a response to the initial question on determining whether the research hypothesis need to be more specifc, novel, valid, or significant. If so, what are your advice to be more specific, novel, valid, or significant? In addition, if the hypothesis need some extra knowledge for it to be more complete, valid, or significant in research, please also try to provide (recall) them."]
+        prompts = [f"You are assisting {DISCIPLINE} scientists on helping providing feedback to their newly proposed research hypothesis, targetting at publishing the research on a top {DISCIPLINE} venue like Nature or Science. You know, to publish a research in Nature or NeurIPS, the hypothesis must be (1) specific enough, which means the research hypothesis should contain enough details of the method for the researchers to know at least what the method is without any confusion or misunderstanding. For example, if to introduce a new concept into a method for the hypothesis, the hypothesis shouldn't be only about 'what the new concept is', but 'how specifically the new concept can be leveraged and integrated to the method'. If it is within your ability, please also provide details on the parameters of the hypothesis, so that the researchers can directly test the hypothesis in their lab; (2) novel enough, which means it should not have been proposed by any existing literature before; (3) completely valid, which means a real {DISCIPLINE} experiments should be able to verify the hypothesis; (4) significant in research, which means it is more preferable for it to have a relatively significant impact in research community. Currently we don't have resources for real lab experiments, so please try your best to analyze on validness based on your own knowledge and understanding. \nPlease try your best to give the {DISCIPLINE} scientists some feedbacks on whether the hypothesis needs to be more specific, novel, valid, or significant. If so, what are your advice to be more specific, novel, valid, or significant? Please directly answer this question. In addition, if the hypothesis needs some extra knowledge for it to be more complete, valid, or significant in research, please also try to provide (recall) them (if the hypothesis is already complete, it is not necessary to provide external knowledge). Please note that your feedback to these aspects should focus on the methodology in the hypothesis, but not how to add descriptions of its novelty, validness, or significance. \nThe hypothesis is: \n", "\nPlease give a response to the initial question on determining whether the research hypothesis need to be more specific, novel, valid, or significant. If so, what are your advice to be more specific, novel, valid, or significant? In addition, if the hypothesis need some extra knowledge for it to be more complete, valid, or significant in research, please also try to provide (recall) them."]
+    elif module_name == "four_aspects_self_numerical_evaluation_structured":
+        prompts = [{
+            "role": "system",
+            "content": f'''
+                You are a harsh and diligent reviewer in {DISCIPLINE}. You are well-known for carefully identifying flaws and usually giving low scores unless a hypothesis is truly exceptional.
+                Given a not-yet-peer-reviewed research hypothesis in {DISCIPLINE}, evaluate it from four aspects: Validness, Novelty, Significance, and Specificity.
+                Each aspect should be scored from 1 to 5 based on the strict guidelines below. High scores (4 or 5) should only be given to truly outstanding hypotheses. Most ordinary or vague hypotheses should receive scores of 1 to 3. Be strict, objective, and critical. Your evaluation should focus only on the content and methodology of the hypothesis, not on writing style.
+                '''
+        }]
     elif module_name == "four_aspects_self_numerical_evaluation":
         prompts = [f'''
                     You are a harsh and diligent reviewer in {DISCIPLINE}. You are well-known for carefully identifying flaws and usually giving low scores unless a hypothesis is truly exceptional.
@@ -193,9 +202,9 @@ def instruction_prompts(module_name, more_info=None):
         prompts = [f"You are helping to develop a {DISCIPLINE} research hypothesis. A senior researcher has identified the research question, a little survey on the background of the research question, a key inspiration paper used to generated a hypothesis for the research question based on the little survey, and the hypothesis generated based on the survey and the inspiration. Although everything goes well now, the hypothesis might only cover one key point (from the inspiration), and might not be complete enough to be a full hypothesis in terms of Validness, Novelty, and Significance. Usually like those papers published on <Nature> or <NeurIPS>, a hypothesis could contain two to three key points for it to be enough excellent in terms of Validness, Novelty, and Significance. Therefore the researcher has already explored the additional knowledge to make the hypothesis more complete. Please try your best to generate a new hypothesis based on the background research question, the inspiration, the additional knowledge, and the given preliminary hypothesis. \nThe background research question is: ", "\n\nThe introduction of the previous methods is:", "\n\nThe core inspiration is: ", "\n\nThe hypothesis from the core inspiration is: ", "\n\nThe additional knowledge is: ", f"\n\nNow you have seen the background research question, an introduction of the previous methods, the core inspiration, the hypothesis from the core inspiration, and the additional knowledge, please try to generate a new hypothesis based on the background research question, the inspiration, the hypothesis, and the additional knowledge. {HYPOTHESIS_GENERATION_CUSTOM_GUIDE}(response format: 'Reasoning Process:\nHypothesis: \n')"]
     # here with_extra_knowledge" means the hypothesis is generated based on the core inspiration and the extra knowledge, but not that the feedback need to cover extra knowledge
     elif module_name == "provide_feedback_to_hypothesis_four_aspects_with_extra_knowledge":
-        prompts = [f"You are helping to develop a {DISCIPLINE} research hypothesis. A senior researcher has identified the research question, a little survey on the background of the research question, a key inspiration paper used to generate a hypothesis for the research question based on the little survey, an extra knowledge that should be usedful to develop a hypothesis, and the hypotheses developed based on the inspiration and the extra knowledge. Please try to give some feedback to the research hypothesis. Specifically, you know, to publish a research in Nature or Science, the hypothesis must be (1) specific enough, which means the research hypothesis should contain enough details of the method for the researchers to know at least what the method is without any confusion or misunderstanding (if it is within your ability, please also provide details on the parameters of the hypothesis, so that the researchers can directly test the hypothesis in their lab); (2) novel enough, which means it should not have been proposed by any existing literature before; (3) completely valid, which means a real {DISCIPLINE} experiments should be able to verify the hypothesis; (4) significant in research, which means it is more preferable for it to have a relatively significant impact in research community. \nPlease try your best to give the senior researcher some feedbacks on whether the hypothesis needs to be more specific, novel, valid, or significant. If so, what are your advice to be more specific, novel, valid, or significant? Please directly answer this question. Please note that your feedback to these aspects should focus on the methodology in the hypothesis, but not how to add descriptions of its novelty, significance, or validness. \nThe background research question is: ", "\n\nThe introduction of the previous methods is:", "\n\nThe core inspiration is: ", "\n\nThe extra knowledge is: ", "\n\nThe hypothesis is: ", "\n\nNow you have seen the background research question, the core inspiration, the extra knowledge, and the hypothesis. Please give a response to the initial question on determining whether the research hypothesis need to be more specifc, novel, valid, or significant. If so, what are your advice to be more specific, novel, valid, or significant?"]
+        prompts = [f"You are helping to develop a {DISCIPLINE} research hypothesis. A senior researcher has identified the research question, a little survey on the background of the research question, a key inspiration paper used to generate a hypothesis for the research question based on the little survey, an extra knowledge that should be usedful to develop a hypothesis, and the hypotheses developed based on the inspiration and the extra knowledge. Please try to give some feedback to the research hypothesis. Specifically, you know, to publish a research in Nature or Science, the hypothesis must be (1) specific enough, which means the research hypothesis should contain enough details of the method for the researchers to know at least what the method is without any confusion or misunderstanding (if it is within your ability, please also provide details on the parameters of the hypothesis, so that the researchers can directly test the hypothesis in their lab); (2) novel enough, which means it should not have been proposed by any existing literature before; (3) completely valid, which means a real {DISCIPLINE} experiments should be able to verify the hypothesis; (4) significant in research, which means it is more preferable for it to have a relatively significant impact in research community. \nPlease try your best to give the senior researcher some feedbacks on whether the hypothesis needs to be more specific, novel, valid, or significant. If so, what are your advice to be more specific, novel, valid, or significant? Please directly answer this question. Please note that your feedback to these aspects should focus on the methodology in the hypothesis, but not how to add descriptions of its novelty, significance, or validity. \nThe background research question is: ", "\n\nThe introduction of the previous methods is:", "\n\nThe core inspiration is: ", "\n\nThe extra knowledge is: ", "\n\nThe hypothesis is: ", "\n\nNow you have seen the background research question, the core inspiration, the extra knowledge, and the hypothesis. Please give a response to the initial question on determining whether the research hypothesis need to be more specific, novel, valid, or significant. If so, what are your advice to be more specific, novel, valid, or significant?"]
     elif module_name == "hypothesis_refinement_with_feedback_with_extra_knowledge":
-        prompts = ["You are helping with the scientific hypotheses generation process. We in general split the period of research hypothesis proposal into four steps. Firstly it's about finding a good and specific background research question, and an introduction of the previous methods under the same topic; Secondly its about finding inspirations (mostly from literatures), which combined with the background research question, can lead to a impactful research hypothesis; Thirdly it's about finding extra knowledge that work along with the inspiration can lead to a more complete hypothesis. Finally it's hypothesis generation based on the background research question, the found inspirations, and the extra knowledge. \nNow we have identified a good research question, a core inspiration in a literature for this research question, and extra knowledge. With them, we have already generated a preliminary research hypothesis. We have also obtain feedbacks on the hypothesis from domain experts in terms of novalty, validity, significance, and clarity. With these feedbacks, please try your best to refine the hypothesis. Please note that during refinement, do not improve a hypothesis's significance by adding expectation of the performance gain of the method or adding description of its potential impact, but you should work on improving the method itself (e.g., by adding or changing details of the methodology). Similar advice for other evaluation aspects (novelty, validness, and clarity), too. \nThe background research question is: ", "\n\nThe introduction of the previous methods is:", "\n\nThe core inspiration is: ", "\n\nThe extra knowledge is: ", "\n\nThe preliminary hypothesis is: ", "\n\nThe feedbacks from domain experts are: ", f"\n\nNow you have seen the background research question, the core inspiration, the extra knowledge, the preliminary hypothesis, and the feedbacks from domain experts. Please try to refine the hypothesis based on the feedbacks. {HYPOTHESIS_GENERATION_CUSTOM_GUIDE}(response format: 'Reasoning Process:\nRefined Hypothesis: \n')"]
+        prompts = ["You are helping with the scientific hypotheses generation process. We in general split the period of research hypothesis proposal into four steps. Firstly it's about finding a good and specific background research question, and an introduction of the previous methods under the same topic; Secondly its about finding inspirations (mostly from literatures), which combined with the background research question, can lead to a impactful research hypothesis; Thirdly it's about finding extra knowledge that work along with the inspiration can lead to a more complete hypothesis. Finally it's hypothesis generation based on the background research question, the found inspirations, and the extra knowledge. \nNow we have identified a good research question, a core inspiration in a literature for this research question, and extra knowledge. With them, we have already generated a preliminary research hypothesis. We have also obtain feedbacks on the hypothesis from domain experts in terms of novelty, validity, significance, and clarity. With these feedbacks, please try your best to refine the hypothesis. Please note that during refinement, do not improve a hypothesis's significance by adding expectation of the performance gain of the method or adding description of its potential impact, but you should work on improving the method itself (e.g., by adding or changing details of the methodology). Similar advice for other evaluation aspects (novelty, validity, and clarity), too. \nThe background research question is: ", "\n\nThe introduction of the previous methods is:", "\n\nThe core inspiration is: ", "\n\nThe extra knowledge is: ", "\n\nThe preliminary hypothesis is: ", "\n\nThe feedbacks from domain experts are: ", f"\n\nNow you have seen the background research question, the core inspiration, the extra knowledge, the preliminary hypothesis, and the feedbacks from domain experts. Please try to refine the hypothesis based on the feedbacks. {HYPOTHESIS_GENERATION_CUSTOM_GUIDE}(response format: 'Reasoning Process:\nRefined Hypothesis: \n')"]
     elif module_name == "eval_matched_score":
         prompts = [f"You are helping to evaluate the quality of a proposed research hypothesis in {DISCIPLINE} by a PhD student. The ground-truth hypothesis will also be provided to compare. Here we mainly focus on whether the proposed hypothesis has covered the key points in terms of the methodology in the ground-truth hypothesis. You will also be given a summary of the key points in the methodology of the ground-truth hypothesis for reference. Please note that for the proposed hypothesis to cover one key point, it is not necessary to explicitly mention the name of the key point, but might also can integrate the key point implicitly in the proposed method. The evaluation criteria is called 'Matched score', which is in a 6-point Likert scale (from 5 to 0). Particularly, 5 points mean that the proposed hypothesis (1) covers all the key points and leverage them similarly as in the methodology of the ground-truth hypothesis, and (2) does not contain any extra key point that has apparent flaws; 4 points mean that the proposed hypothesis (1) covers all the key points (or at least three key points) and leverage them similarly as in the methodology of the ground-truth hypothesis, (2) but also with extra key points that have apparent flaws; 3 points mean that the proposed hypothesis (1) covers at least two key points and leverage them similarly as in the methodology of the ground-truth hypothesis, (2) but does not cover all key points in the ground-truth hypothesis, (3) might or might not contain extra key points; 2 points mean that the proposed hypothesis (1) covers at least one key point in the methodology of the ground-truth hypothesis, and leverage it similarly as in the methodology of ground-truth hypothesis, (2) but does not cover all key points in the ground-truth hypothesis, and (3) might or might not contain extra key points; 1 point means that the proposed hypothesis (1) covers at least one key point in the methodology of the ground-truth hypothesis, (2) but is used differently as in the methodology of ground-truth hypothesis, and (3) might or might not contain extra key points; 0 point means that the proposed hypothesis does not cover any key point in the methodology of the ground-truth hypothesis at all. Please note that the total number of key points in the ground-truth hypothesis might be less than three, so that multiple points can be given. E.g., there's only one key point in the ground-truth hypothesis, and the proposed hypothesis covers the one key point, it's possible to give 2 points, 4 points, and 5 points. In this case, we should choose score from 4 points and 5 points, depending on the existence and quality of extra key points. 'Leveraging a key point similarly as in the methodology of the ground-truth hypothesis' means that in the proposed hypothesis, the same (or very related) concept (key point) is used in a similar way with a similar goal compared to the ground-truth hypothesis (not necessarily for the proposed hypothesis to be exactly the same with the groudtruth hypothesis to be classified as 'similar'). When judging whether an extra key point has apparent flaws, you should use your own knowledge to judge, but rather than to rely on the count number of pieces of extra key point to judge. \nPlease evaluate the proposed hypothesis based on the ground-truth hypothesis. \nThe proposed hypothesis is: ", "\n\nThe ground-truth hypothesis is: ", "\n\nThe key points in the ground-truth hypothesis are: ", "\n\nPlease evaluate the proposed hypothesis based on the ground-truth hypothesis, and give a score. (response format: 'Reason: \nMatched score: \n')"]
     elif module_name == "eval_matched_score_hard":
@@ -523,7 +532,6 @@ def llm_generation(prompt, model_name, client, temperature=1., api_type=0):
 
 
 def get_structured_generation_from_raw_generation_by_llm(gene, template, client, temperature, model_name, api_type):
-    
     assert isinstance(gene, str), print("type(gene): ", type(gene))
     # use .strip("#") to remove the '#' or "*" in the gene (the '#' or "*" is usually added by the LLM as a markdown format); used to match text (eg, title)
     gene = re.sub("[#*]", "", gene).strip()
@@ -563,6 +571,49 @@ class HypothesisResponse(BaseModel):
 class RefinedHypothesisResponse(BaseModel):
     reasoning_process: str
     refined_hypothesis: str
+
+class EvaluationRubric(BaseModel):
+    score: int = Field(ge=1, le=5)
+    reason: str = Field(description="Concise reasoning explaining the score.")
+
+class ReviewerEvaluation(BaseModel):
+    validity: EvaluationRubric = Field(
+        description="Validity (Soundness)"
+                    "Does the hypothesis make sense based on your knowledge and reasoning ability?"
+                    "5 — Exceptional soundness. Fully coherent and highly reasonable. No weak assumptions."
+                    "4 — Strong validity. Mostly reasonable with some uncertain assumptions."
+                    "3 — Barely valid. Possible but weak, speculative, or fragile reasoning."
+                    "2 — Low validity. Doubtful or inconsistent."
+                    "1 — Invalid. Contradicts known science or impossible mechanisms."
+    )
+    novelty: EvaluationRubric = Field(
+        description="Novelty (Originality)"
+                    "Is the core idea new?"
+                    "5 — Groundbreaking novelty. Fundamentally new principle or mechanism."
+                    "4 — Highly novel. Significant deviation from existing knowledge."
+                    "3 — Moderate novelty. New combination but within existing frameworks."
+                    "2 — Low novelty. Minor variations of existing work."
+                    "1 — No novelty. Standard or trivial idea."
+    )
+    significance: EvaluationRubric = Field(
+        description="Significance (Impact)"
+                    "If true, how much impact does it have?"
+                    "5 — Field-changing. Reshapes core theories or applications."
+                    "4 — High impact. Advances state-of-the-art or solves key problem."
+                    "3 — Meaningful. Improves a subfield or opens new directions."
+                    "2 — Limited. Incremental improvement or niche value."
+                    "1 — Minimal. Very narrow or little added value."
+    )
+    specificity: EvaluationRubric = Field(
+        description="Specificity (Clarity & Methodological Detail)"
+                    "Is the hypothesis detailed and actionable for scientists?"
+                    "5 — Fully detailed. Every key mechanism and parameter is specified."
+                    "4 — Detailed. Most steps are clear with minor clarification needed."
+                    "3 — Moderately clear. General methodology but vague key steps."
+                    "2 — Low specificity. High-level idea only; hard to use directly."
+                    "1 — Vague. No actionable detail."
+    )
+
 
 class EvaluationResponse(BaseModel):
     """
@@ -612,6 +663,15 @@ def llm_generation_structured(prompt, model_name, client, template:BaseModel, te
 
     cnt_max_trials = 3
 
+    if isinstance(prompt, str):
+        messages=[
+            {"role": "system", "content":
+                     "You are a helpful and knowledgeable scientist."},
+            {"role": "user", "content": prompt}
+        ]
+    else:
+        messages = prompt
+
     for cur_trial in range(cnt_max_trials):
         try:
             if api_type in [0, 1]:  # OpenAI or Azure
@@ -619,11 +679,7 @@ def llm_generation_structured(prompt, model_name, client, template:BaseModel, te
                     model=model_name,
                     temperature=temperature,
                     max_completion_tokens=max_completion_tokens,
-                    messages=[
-                        {"role": "system", "content":
-                                 "You are a helpful and knowledgeable scientist."},
-                        {"role": "user", "content": prompt}
-                    ],
+                    messages=messages,
                     response_format=template
                 )
                 
@@ -713,65 +769,3 @@ def if_element_in_list_with_similarity_threshold(list_elements, element, thresho
         if jaccard_similarity(element.lower(), cur_element.lower()) > threshold:
             return True
     return False
-
-
-def extract_scores(cur_generation):
-    """
-    Extract evaluation scores using a unified approach that works for all model types.
-    
-    Returns: (scores, reasons, success) tuple where:
-        - scores: list of 4 integer scores [validness, novelty, significance, specificity]
-        - reasons: list of 4 strings with reasons for each score
-        - success: boolean indicating if all scores were extracted
-    """
-    import re
-    
-    # Clean up reasoning model output
-    cleaned_text = extract_reasoning_model_content(cur_generation)
-    
-    # Define the score types we're looking for
-    score_types = ["Validness", "Novelty", "Significance", "Specificity"]
-    scores = []
-    reasons = []
-    
-    for score_type in score_types:
-        # Try marker-based extraction first
-        reason = extract_field(cleaned_text, f"{score_type} Reason", expected_type='text', strict_extraction=True)
-        score = extract_field(cleaned_text, f"{score_type} Score", expected_type='number', strict_extraction=True)
-        
-        # If marker extraction failed, try simpler patterns
-        if score is None:
-            # Try patterns like "Validness score: 4" or "Validness: 4"
-            patterns = [
-                rf"{score_type}\s+score\s*:\s*(\d+)",
-                rf"{score_type}\s*:\s*(\d+)",
-                rf"score\s+for\s+{score_type}\s*:\s*(\d+)",
-            ]
-            
-            for pattern in patterns:
-                match = re.search(pattern, cleaned_text, re.IGNORECASE)
-                if match:
-                    score_str = match.group(1)
-                    if score_str in ["1", "2", "3", "4", "5"]:
-                        score = int(score_str)
-                        break
-        
-        # If we still don't have a reason but have a score, try to extract reason
-        if score is not None and not reason:
-            # Try pattern like "Concise reason for X score: ..."
-            reason_pattern = rf"(?:Concise\s+)?reason\s+for\s+{score_type}\s+score\s*:\s*([^\n]+)"
-            match = re.search(reason_pattern, cleaned_text, re.IGNORECASE)
-            if match:
-                reason = match.group(1).strip()
-        
-        scores.append(score)
-        reasons.append(reason or "")
-    
-    # Check if all scores were extracted and are valid
-    valid_scores = all(score is not None and 1 <= score <= 5 for score in scores)
-    
-    if valid_scores:
-        return scores, reasons, True
-    else:
-        print(f"Score extraction failed. Extracted scores: {scores}")
-        return [], [], False
