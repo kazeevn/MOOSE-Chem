@@ -734,3 +734,65 @@ def if_element_in_list_with_similarity_threshold(list_elements, element, thresho
         if jaccard_similarity(element.lower(), cur_element.lower()) > threshold:
             return True
     return False
+
+
+def extract_scores(cur_generation):
+    """
+    Extract evaluation scores using a unified approach that works for all model types.
+    
+    Returns: (scores, reasons, success) tuple where:
+        - scores: list of 4 integer scores [validness, novelty, significance, specificity]
+        - reasons: list of 4 strings with reasons for each score
+        - success: boolean indicating if all scores were extracted
+    """
+    import re
+    
+    # Clean up reasoning model output
+    cleaned_text = extract_reasoning_model_content(cur_generation)
+    
+    # Define the score types we're looking for
+    score_types = ["Validness", "Novelty", "Significance", "Specificity"]
+    scores = []
+    reasons = []
+    
+    for score_type in score_types:
+        # Try marker-based extraction first
+        reason = extract_field(cleaned_text, f"{score_type} Reason", expected_type='text', strict_extraction=True)
+        score = extract_field(cleaned_text, f"{score_type} Score", expected_type='number', strict_extraction=True)
+        
+        # If marker extraction failed, try simpler patterns
+        if score is None:
+            # Try patterns like "Validness score: 4" or "Validness: 4"
+            patterns = [
+                rf"{score_type}\s+score\s*:\s*(\d+)",
+                rf"{score_type}\s*:\s*(\d+)",
+                rf"score\s+for\s+{score_type}\s*:\s*(\d+)",
+            ]
+            
+            for pattern in patterns:
+                match = re.search(pattern, cleaned_text, re.IGNORECASE)
+                if match:
+                    score_str = match.group(1)
+                    if score_str in ["1", "2", "3", "4", "5"]:
+                        score = int(score_str)
+                        break
+        
+        # If we still don't have a reason but have a score, try to extract reason
+        if score is not None and not reason:
+            # Try pattern like "Concise reason for X score: ..."
+            reason_pattern = rf"(?:Concise\s+)?reason\s+for\s+{score_type}\s+score\s*:\s*([^\n]+)"
+            match = re.search(reason_pattern, cleaned_text, re.IGNORECASE)
+            if match:
+                reason = match.group(1).strip()
+        
+        scores.append(score)
+        reasons.append(reason or "")
+    
+    # Check if all scores were extracted and are valid
+    valid_scores = all(score is not None and 1 <= score <= 5 for score in scores)
+    
+    if valid_scores:
+        return scores, reasons, True
+    else:
+        print(f"Score extraction failed. Extracted scores: {scores}")
+        return [], [], False

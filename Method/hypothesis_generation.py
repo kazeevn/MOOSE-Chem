@@ -850,15 +850,15 @@ class HypothesisGenerationEA(object):
         while True:
             try:
                 score_text = llm_generation(full_prompt, self.args.model_name, self.client, api_type=self.args.api_type)
-                score_collection, score_reason_collection, if_successful = pick_score(score_text)
+                score_collection, score_reason_collection, if_successful = extract_scores(score_text)
                 assert if_successful == True
                 break
             except AssertionError as e:
-                print(f"Warning: pick_score failed, score_text: {score_text}")
+                print(f"Warning: extract_scores failed, score_text: {score_text}")
                 # if the format
                 print("AssertionError: {}, try again..".format(e))
             except Exception as e:
-                print(f"Warning: pick_score failed, score_text: {score_text}")
+                print(f"Warning: extract_scores failed, score_text: {score_text}")
                 print("Exception: {}, try again..".format(e))
         return score_collection, score_reason_collection
     
