@@ -3,7 +3,7 @@ import numpy as np
 from openai import OpenAI, AzureOpenAI
 from google import genai
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from Method.utils import load_chem_annotation, load_dict_title_2_abstract, load_found_inspirations, get_item_from_dict_with_very_similar_but_not_exact_key, instruction_prompts, llm_generation, llm_generation_structured, recover_generated_title_to_exact_version_of_title, load_groundtruth_inspirations_as_screened_inspirations, exchange_order_in_list
+from Method.utils import load_chem_annotation, load_dict_title_2_abstract, load_found_inspirations, get_item_from_dict_with_very_similar_but_not_exact_key, instruction_prompts, llm_generation, llm_generation_structured, recover_generated_title_to_exact_version_of_title, load_groundtruth_inspirations_as_screened_inspirations, exchange_order_in_list, HypothesisResponse, RefinedHypothesisResponse
 from Method.logging_utils import setup_logger
 
 
@@ -620,6 +620,7 @@ class HypothesisGenerationEA(object):
     ## Output
     # hypothesis_collection: [extra_knowledge_0, output_hyp_0, reasoning_process_0, feedback_0, refined_hyp_0]
     def self_explore_extra_knowledge_and_hyp_gene_and_refinement_single_step(self, backgroud_question, backgroud_survey, cur_insp_core_node, input_hyp, other_mutations=None):
+        raise NotImplementedError("This function relies on deprecated non-structured LLM calls")
         # core insp prompt
         cur_insp_core_node_prompt = "title: {}; abstract: {}.".format(cur_insp_core_node[0], cur_insp_core_node[2])
 
@@ -711,13 +712,13 @@ class HypothesisGenerationEA(object):
                 prompts = instruction_prompts("final_recombinational_mutation_hyp_gene_between_diff_inspiration")
                 assert len(prompts) == 6
                 full_prompt = prompts[0] + backgroud_question + prompts[1] + backgroud_survey + prompts[2] + cur_insp_core_node_prompt + prompts[3] + this_mutation + prompts[4] + other_mutations_prompt + prompts[5]
-                template = ['Reasoning Process:', 'Hypothesis:']
+                template = HypothesisResponse
             # during refinement of recombination of different insp islands, we need to keep seeing the different hyps from different insp islands
             elif same_mutation_prev_hyp is not None and hyp_feedback is not None:
                 prompts = instruction_prompts("final_recombinational_mutation_hyp_gene_between_diff_inspiration_with_feedback")
                 assert len(prompts) == 8
                 full_prompt = prompts[0] + backgroud_question + prompts[1] + backgroud_survey + prompts[2] + cur_insp_core_node_prompt + prompts[3] + this_mutation + prompts[4] + other_mutations_prompt + prompts[5] + same_mutation_prev_hyp + prompts[6] + hyp_feedback + prompts[7]
-                template = ['Reasoning Process:', 'Refined Hypothesis:']
+                template = RefinedHypothesisResponse
             else:
                 raise ValueError("should not have this case. same_mutation_prev_hyp: {}; hyp_feedback: {}".format(same_mutation_prev_hyp, hyp_feedback))
         elif recombination_type == 1:
@@ -732,12 +733,12 @@ class HypothesisGenerationEA(object):
                 prompts = instruction_prompts("final_recombinational_mutation_hyp_gene_same_bkg_insp")
                 assert len(prompts) == 5
                 full_prompt = prompts[0] + backgroud_question + prompts[1] + backgroud_survey + prompts[2] + cur_insp_core_node_prompt + prompts[3] + other_mutations_prompt + prompts[4]
-                template = ['Reasoning Process:', 'Hypothesis:']
+                template = HypothesisResponse
             elif same_mutation_prev_hyp is not None and hyp_feedback is not None:
                 prompts = instruction_prompts("final_recombinational_mutation_hyp_gene_same_bkg_insp_with_feedback")
                 assert len(prompts) == 7
                 full_prompt = prompts[0] + backgroud_question + prompts[1] + backgroud_survey + prompts[2] + cur_insp_core_node_prompt + prompts[3] + other_mutations_prompt + prompts[4] + same_mutation_prev_hyp + prompts[5] + hyp_feedback + prompts[6]
-                template = ['Reasoning Process:', 'Refined Hypothesis:']
+                template = RefinedHypothesisResponse
             else:
                 raise ValueError("should not have this case. same_mutation_prev_hyp: {}; hyp_feedback: {}".format(same_mutation_prev_hyp, hyp_feedback))
         elif recombination_type == 0:
@@ -752,19 +753,19 @@ class HypothesisGenerationEA(object):
                 prompts = instruction_prompts("coarse_hypothesis_generation_only_core_inspiration")
                 assert len(prompts) == 4
                 full_prompt = prompts[0] + backgroud_question + prompts[1] + backgroud_survey + prompts[2] + cur_insp_core_node_prompt + prompts[3]
-                template=['Reasoning Process:', 'Hypothesis:']
+                template=HypothesisResponse
             elif other_mutations is None and hyp_feedback is not None:
                 prompts = instruction_prompts("hypothesis_generation_with_feedback_only_core_inspiration")
                 assert len(prompts) == 6
                 full_prompt = prompts[0] + backgroud_question + prompts[1] + backgroud_survey + prompts[2] + cur_insp_core_node_prompt + prompts[3] + same_mutation_prev_hyp + prompts[4] + hyp_feedback + prompts[5]
-                template=['Reasoning Process:', 'Refined Hypothesis:']
+                template=RefinedHypothesisResponse
             # to develop the second or more mutation line that should be different with the hypotheses from previous mutation lines
             elif other_mutations is not None and hyp_feedback is None:
                 prompts = instruction_prompts("hypothesis_generation_mutation_different_with_prev_mutations_only_core_inspiration")
                 assert len(prompts) == 5
                 # full_prompt
                 full_prompt = prompts[0] + backgroud_question + prompts[1] + backgroud_survey + prompts[2] + cur_insp_core_node_prompt + prompts[3] + other_mutations_prompt + prompts[4]
-                template = ['Reasoning Process:', 'Hypothesis:']
+                template = HypothesisResponse
             elif other_mutations is not None and hyp_feedback is not None:
                 raise ValueError("should not have both other_mutations and hyp_feedback")
             else:
@@ -775,12 +776,12 @@ class HypothesisGenerationEA(object):
                 prompts = instruction_prompts("coarse_hypothesis_generation_without_inspiration")
                 assert len(prompts) == 3
                 full_prompt = prompts[0] + backgroud_question + prompts[1] + backgroud_survey + prompts[2] 
-                template = ['Reasoning Process:', 'Hypothesis:']
+                template = HypothesisResponse
             elif hyp_feedback is not None:
                 prompts = instruction_prompts("hypothesis_generation_with_feedback_without_inspiration")
                 assert len(prompts) == 5
                 full_prompt = prompts[0] + backgroud_question + prompts[1] + backgroud_survey + prompts[2] + same_mutation_prev_hyp + prompts[3] + hyp_feedback + prompts[4]
-                template = ['Reasoning Process:', 'Refined Hypothesis:']
+                template = RefinedHypothesisResponse
             else:
                 raise ValueError("should not have this case")
         else:

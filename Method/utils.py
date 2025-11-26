@@ -38,12 +38,12 @@ def instruction_prompts(module_name, more_info=None):
     elif module_name == "coarse_hypothesis_generation_without_inspiration":
         prompts = ["You are helping with the scientific hypotheses generation process. We in general split the period of conducting research into three steps. Firstly it's about finding a good and specific background research question, and an introduction of the previous methods under the same topic; Secondly it's hypothesis generation based on the background research question; Finally it's about designing and conducting experiments to verify hypothesis. An example is the backpropagation of neural networks. In backpropagation, the research question is how to use data to automatically improve the parameters of a multi-layer logistic regression, and the research hypothesis is the backpropagation itself. In their paper, the authors have conducted experiments to verify their hypothesis. Now we have identified a good research question. Please help us generate a novel, valid, and significant research hypothesis based on the background research question. \nThe background research question is: ", "\n\nThe introduction of the previous methods is:", f"\n\nNow you have seen the background research question. Please try to generate a novel, valid, and significant research hypothesis based on the background research question. {HYPOTHESIS_GENERATION_CUSTOM_GUIDE}(response format: 'Reasoning Process:\nHypothesis: \n')"]
     elif module_name == "validness_checking":
-        prompts = [f"You are assisting {DISCIPLINE} scientists on helping providing feedback to their newly proposed research hypothesis, targetting at publishing the research on a top {DISCIPLINE} venue like Nature or Science. You know that to publish a research in Nature or NeurIPS, the hypothesis must be both novel and valid. Here we focus on the validness aspect. Please try your best to give the {DISCIPLINE} scientists some feedbacks on whether the hypothesis by any chance is not valid. If not valid, try to give advice on how it could be modified to be more valid. Please directly answer this question. \nThe hypothesis is: \n", "\nPlease give a response to the initial question on determining whether the research hypothesis by any chance is not valid. If not valid, what are your advice to be more valid? (response format: 'Yes or No: \nAdvice:\n')"]
+        prompts = [f"You are assisting {DISCIPLINE} scientists on helping providing feedback to their newly proposed research hypothesis, targeting at publishing the research on a top {DISCIPLINE} venue like Nature or Science. You know that to publish a research in Nature or NeurIPS, the hypothesis must be both novel and valid. Here we focus on the validness aspect. Please try your best to give the {DISCIPLINE} scientists some feedbacks on whether the hypothesis by any chance is not valid. If not valid, try to give advice on how it could be modified to be more valid. Please directly answer this question. \nThe hypothesis is: \n", "\nPlease give a response to the initial question on determining whether the research hypothesis by any chance is not valid. If not valid, what are your advice to be more valid? (response format: 'Yes or No: \nAdvice:\n')"]
     elif module_name == "novelty_checking":
-        prompts = [f"You are assisting {DISCIPLINE} scientists on helping providing feedback to their newly proposed research hypothesis, targetting at publishing the research on a top {DISCIPLINE} venue like Nature or Science. You know, to publish a research in Nature or Science, the hypothesis must be novel enough, which means it should not have been proposed by any existing literature before. \nPlease try your best to give the {DISCIPLINE} scientists some feedbacks on whether the hypothesis needs to be more novel. If so, what are your advice to be more novel? Please directly answer this question. Please note that your feedback should focus on the methodology in the hypothesis, but not how to add descriptions of its novelty. \nThe hypothesis is: \n", "\nPlease give a response to the initial question on determining whether the research hypothesis need to be more novel. If so, what are your advice to make it more novel?"]
+        prompts = [f"You are assisting {DISCIPLINE} scientists on helping providing feedback to their newly proposed research hypothesis, targettng at publishing the research on a top {DISCIPLINE} venue like Nature or Science. You know, to publish a research in Nature or Science, the hypothesis must be novel enough, which means it should not have been proposed by any existing literature before. \nPlease try your best to give the {DISCIPLINE} scientists some feedbacks on whether the hypothesis needs to be more novel. If so, what are your advice to be more novel? Please directly answer this question. Please note that your feedback should focus on the methodology in the hypothesis, but not how to add descriptions of its novelty. \nThe hypothesis is: \n", "\nPlease give a response to the initial question on determining whether the research hypothesis need to be more novel. If so, what are your advice to make it more novel?"]
     elif module_name == "clarity_checking":
-        # prompts = [f"You are assisting {DISCIPLINE} scientists on helping providing feedback to their newly proposed research hypothesis, targetting at publishing the research on a top {DISCIPLINE} venue like Nature or Science. You know, to publish a research in Nature or Science, the hypothesis must be clear and specific enough. Please try your best to give the {DISCIPLINE} scientists some feedbacks on whether the hypothesis needs to be more specific. If so, what are your advice to be more specific? We expect that every detail of the hypothesis is provided, so that a {DISCIPLINE} scientist looking at this hypothesis would have absolutely no doubt on what exactly and comprehensively the hypothesis is in every procedure and in every detail. \
-        #            Please directly answer this question. \nThe hypothesis is: \n", "\nPlease give a response to the initial question on determining whether the research hypothesis need to be more specifc. If so, what are your advice to be more specific? (response format: 'Yes or No: \nAdvice:\n')"]
+        # prompts = [f"You are assisting {DISCIPLINE} scientists on helping providing feedback to their newly proposed research hypothesis, targeting at publishing the research on a top {DISCIPLINE} venue like Nature or Science. You know, to publish a research in Nature or Science, the hypothesis must be clear and specific enough. Please try your best to give the {DISCIPLINE} scientists some feedbacks on whether the hypothesis needs to be more specific. If so, what are your advice to be more specific? We expect that every detail of the hypothesis is provided, so that a {DISCIPLINE} scientist looking at this hypothesis would have absolutely no doubt on what exactly and comprehensively the hypothesis is in every procedure and in every detail. \
+        #            Please directly answer this question. \nThe hypothesis is: \n", "\nPlease give a response to the initial question on determining whether the research hypothesis need to be more specific. If so, what are your advice to be more specific? (response format: 'Yes or No: \nAdvice:\n')"]
         prompts = [f'''
                     You are assisting {DISCIPLINE} scientists by providing detailed feedback on their newly proposed research hypothesis. The goal is to help them refine it for potential publication in a top {DISCIPLINE} venue such as Nature or Science.
 
@@ -60,10 +60,10 @@ def instruction_prompts(module_name, more_info=None):
                     Your goal is to ensure that any {DISCIPLINE} scientist reading this hypothesis would have absolutely no doubt about its intended meaning, scope, and procedural details.
                    
                     Please directly answer this question. \nThe hypothesis is: \n
-                   ''', "\nPlease give a response to the initial question on determining whether the research hypothesis need to be more specifc. If so, what are your advice to be more specific? (response format: 'Yes or No: \nAdvice:\n')"]
+                   ''', "\nPlease give a response to the initial question on determining whether the research hypothesis need to be more specific. If so, what are your advice to be more specific? (response format: 'Yes or No: \nAdvice:\n')"]
     elif module_name == "four_aspects_checking":
-        # prompts = [f"You are assisting {DISCIPLINE} scientists on helping providing feedback to their newly proposed research hypothesis, targetting at publishing the research on a top {DISCIPLINE} venue like Nature or Science. You know, to publish a research in Nature or Science, the hypothesis must be (1) specific enough, which means the research hypothesis should contain enough details of the method for the researchers to know at least what the method is without any confusion or misunderstanding. For example, if to introduce a new concept into a method for the hypothesis, the hypothesis shouldn't be only about 'what the new concept is', but 'how specifically the new concept can be leveraged and integrated to the method'. If it is within your ability, please also provide details on the parameters of the hypothesis, so that the researchers can directly test the hypothesis in their lab; (2) novel enough, which means it should not have been proposed by any existing literature before; (3) completely valid, which means a real {DISCIPLINE} experiments should be able to verify the hypothesis; (4) significant in research, which means it is more preferable for it to have a relatively significant impact in research community. Currently we don't have resources for real lab experiments, so please try your best to analyze on validness based on your own knowledge and understanding. \nPlease try your best to give the {DISCIPLINE} scientists some feedbacks on whether the hypothesis needs to be more specific, novel, valid, or significant. If so, what are your advice to be more specific, novel, valid, or significant? Please directly answer this question. Please note that your feedback to these aspects should focus on the methodology in the hypothesis, but not how to add descriptions of its novelty, validness, or significance. \
-        #            \nThe hypothesis is: \n", "\nPlease give a response to the initial question on determining whether the research hypothesis need to be more specifc, novel, valid, or significant. If so, what are your advice to be more specific, novel, valid, or significant?"]
+        # prompts = [f"You are assisting {DISCIPLINE} scientists on helping providing feedback to their newly proposed research hypothesis, targeting at publishing the research on a top {DISCIPLINE} venue like Nature or Science. You know, to publish a research in Nature or Science, the hypothesis must be (1) specific enough, which means the research hypothesis should contain enough details of the method for the researchers to know at least what the method is without any confusion or misunderstanding. For example, if to introduce a new concept into a method for the hypothesis, the hypothesis shouldn't be only about 'what the new concept is', but 'how specifically the new concept can be leveraged and integrated to the method'. If it is within your ability, please also provide details on the parameters of the hypothesis, so that the researchers can directly test the hypothesis in their lab; (2) novel enough, which means it should not have been proposed by any existing literature before; (3) completely valid, which means a real {DISCIPLINE} experiments should be able to verify the hypothesis; (4) significant in research, which means it is more preferable for it to have a relatively significant impact in research community. Currently we don't have resources for real lab experiments, so please try your best to analyze on validness based on your own knowledge and understanding. \nPlease try your best to give the {DISCIPLINE} scientists some feedbacks on whether the hypothesis needs to be more specific, novel, valid, or significant. If so, what are your advice to be more specific, novel, valid, or significant? Please directly answer this question. Please note that your feedback to these aspects should focus on the methodology in the hypothesis, but not how to add descriptions of its novelty, validness, or significance. \
+        #            \nThe hypothesis is: \n", "\nPlease give a response to the initial question on determining whether the research hypothesis need to be more specific, novel, valid, or significant. If so, what are your advice to be more specific, novel, valid, or significant?"]
         prompts = [f'''
                     You are assisting {DISCIPLINE} scientists by providing detailed feedback on their newly proposed research hypothesis. The goal is to help them refine it for potential publication in a top {DISCIPLINE} venue such as Nature or NeurIPS.
 
@@ -523,12 +523,11 @@ def llm_generation(prompt, model_name, client, temperature=1., api_type=0):
 
 
 def get_structured_generation_from_raw_generation_by_llm(gene, template, client, temperature, model_name, api_type):
+    
     assert isinstance(gene, str), print("type(gene): ", type(gene))
     # use .strip("#") to remove the '#' or "*" in the gene (the '#' or "*" is usually added by the LLM as a markdown format); used to match text (eg, title)
     gene = re.sub("[#*]", "", gene).strip()
     assert len(template) == 2, print("template: ", template)
-    # In your answer, please only mention the words in the template when use it as a template. For example, if the template is ['Hypothesis:', 'Reasoning Process:'], then your answer should not contain 'Analysis of the Hypothesis:', since it also contain 'Hypothesis:'.
-    # Whenever there are information in the passage related to the template, please restructure the information into the template format;
     prompt = "You are a helpful assistant.\nPlease help to organize the following passage into a structured format, following the template. When restructure the passage with the template, please try not to rephrase but to use the original information in the passage (to avoid information distortion). If the template is only about a subset of information in the passage, you can extract only that subset of information to fill the template. If there is no such information for the template in the passage, please still output the exact template first, and fill the content for the template as 'None'. \n\nThe passage is: \n" + gene + f"\n\nThe template is: \n{template[0]} \n{template[1]} \n. Now, please restructure the passage strictly with the template (literally strictly, e.g., the case style of the template should also remain the same when used to restructure the passage)."
     # print("prompt: ", prompt)
     
@@ -599,7 +598,7 @@ def llm_generation_structured(prompt, model_name, client, template:BaseModel, te
         prompt: The input prompt
         model_name: The model to use
         client: The OpenAI client
-        template: List of field names like ['Reasoning Process:', 'Hypothesis:']
+        template: Pydantic model defining the structured output format
         temperature: Temperature for generation
         api_type: API type (0=OpenAI, 1=Azure, 2=Google)
     
@@ -613,38 +612,19 @@ def llm_generation_structured(prompt, model_name, client, template:BaseModel, te
 
     cnt_max_trials = 3
 
-    # Determine which response model to use based on template
-    if not isinstance(template, BaseModel):
-        print(template)
-        logger.warning("Template is not a Pydantic model. "
-                       "Attempting to infer response model from template list.")
-        if len(template) == 2:
-            if 'refined' in template[1].lower():
-                response_format = RefinedHypothesisResponse
-                logger.warning("Using RefinedHypothesisResponse as response format.")
-            else:
-                response_format = HypothesisResponse
-                logger.warning("Using HypothesisResponse as response format.")
-        else:
-            raise ValueError("Template not supported.")
-    else:
-        response_format = template
-
     for cur_trial in range(cnt_max_trials):
         try:
             if api_type in [0, 1]:  # OpenAI or Azure
-                # Use the beta structured outputs API
-
-                completion = client.beta.chat.completions.parse(
+                completion = client.chat.completions.parse(
                     model=model_name,
                     temperature=temperature,
                     max_completion_tokens=max_completion_tokens,
                     messages=[
                         {"role": "system", "content":
-                                 "You are a helpful and knowlegeble scientist. Provide your response in the exact format requested."},
+                                 "You are a helpful and knowledgeable scientist."},
                         {"role": "user", "content": prompt}
                     ],
-                    response_format=response_format
+                    response_format=template
                 )
                 
                 # Parse the structured response
@@ -653,12 +633,11 @@ def llm_generation_structured(prompt, model_name, client, template:BaseModel, te
                 # Convert to the expected format
                 if isinstance(response_data, HypothesisResponse):
                     return [[response_data.hypothesis, response_data.reasoning_process]]
-                elif isinstance(response_data, RefinedHypothesisResponse):
+                if isinstance(response_data, RefinedHypothesisResponse):
                     return [[response_data.refined_hypothesis, response_data.reasoning_process]]
-                elif isinstance(response_data, EvaluationResponse):
+                if isinstance(response_data, EvaluationResponse):
                     return [response_data.matched_score, response_data.reason]
-                else:
-                    return response_data
+                return response_data
 
             else:
                 raise NotImplementedError(f"Structured outputs not implemented for api_type {api_type}")
