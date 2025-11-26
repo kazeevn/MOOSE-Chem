@@ -859,7 +859,7 @@ class HypothesisGenerationEA(object):
     def save_file(self, data, file_path):
         with open(file_path, 'w') as f:
             json.dump(data, f)
-        print("Saved data to {}".format(file_path))
+        print(f"Saved data to {file_path}")
 
 
 def main():

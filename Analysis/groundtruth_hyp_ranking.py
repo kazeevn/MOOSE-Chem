@@ -1,21 +1,9 @@
 import os, sys, argparse, json, time, copy, math
-from openai import OpenAI, AzureOpenAI
-from pydantic import BaseModel, Field
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from Method.utils import load_chem_annotation, instruction_prompts, llm_generation_structured
 import numpy as np
-
-
-class HypothesisScore(BaseModel):
-    """Pydantic schema for structured hypothesis scoring with four aspects."""
-    validness_reason: str = Field(..., description="Concise reason for validness score")
-    validness_score: int = Field(..., ge=1, le=5, description="Validness score from 1 to 5")
-    novelty_reason: str = Field(..., description="Concise reason for novelty score")
-    novelty_score: int = Field(..., ge=1, le=5, description="Novelty score from 1 to 5")
-    significance_reason: str = Field(..., description="Concise reason for significance score")
-    significance_score: int = Field(..., ge=1, le=5, description="Significance score from 1 to 5")
-    specificity_reason: str = Field(..., description="Concise reason for specificity score")
-    specificity_score: int = Field(..., ge=1, le=5, description="Specificity score from 1 to 5")
+from pydantic import BaseModel, Field
+from openai import OpenAI, AzureOpenAI
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from Method.utils import load_chem_annotation, instruction_prompts, llm_generation_structured, ReviewerEvaluation
 
 
 class GroundTruth_Hyp_Ranking(object):
@@ -36,41 +24,26 @@ class GroundTruth_Hyp_Ranking(object):
             raise NotImplementedError
         # groundtruth hypothesis
         self.bkg_q_list, self.dict_bkg2insp, self.dict_bkg2survey, self.dict_bkg2groundtruthHyp, self.dict_bkg2note, self.dict_bkg2idx, self.dict_idx2bkg, self.dict_bkg2reasoningprocess = load_chem_annotation(args.chem_annotation_path, self.args.if_use_strict_survey_question, self.args.if_use_background_survey)      
-        
+
 
     ## INPUT
     # cur_hyp: text
     ## Output
     # score_collection: ['score0', 'score1', 'score2', 'score3']
     # score_reason_collection: ['reason0', 'reason1', 'reason2', 'reason3']
-    def four_aspects_self_numerical_evaluation_for_hyp(self, cur_hyp):
-        prompts = instruction_prompts("four_aspects_self_numerical_evaluation")
-        assert len(prompts) == 2
+    def four_aspects_self_numerical_evaluation_for_hyp(self, cur_hyp: str):
+        # instructions
+        prompts = instruction_prompts("four_aspects_self_numerical_evaluation_structured")
+        assert len(prompts) == 1
+        assert prompts[0]['role'] == 'system'
         # cur_hypothesis_prompt: for evaluation, we only need the hypothesis itself, but not reasoning process
-        cur_hypothesis_prompt = f"hypothesis: {cur_hyp}."
-        full_prompt = prompts[0] + cur_hypothesis_prompt + prompts[1]
-        # generation using structured output
-        structured_output = llm_generation_structured(
-            full_prompt, 
-            self.args.model_name, 
-            self.client, 
-            template=HypothesisScore, 
-            temperature=1.0, 
-            api_type=self.args.api_type
-        )
-        # Extract scores and reasons from the structured output
-        score_collection = [
-            structured_output.validness_score,
-            structured_output.novelty_score,
-            structured_output.significance_score,
-            structured_output.specificity_score
-        ]
-        score_reason_collection = [
-            structured_output.validness_reason,
-            structured_output.novelty_reason,
-            structured_output.significance_reason,
-            structured_output.specificity_reason
-        ]
+        prompts.append({"role": "user", "content": cur_hyp})
+        scores = llm_generation_structured(prompts, self.args.model_name, self.client, template=ReviewerEvaluation, api_type=self.args.api_type)
+        # Legacy compatibility
+        score_rubrics = ["validity", "novelty", "significance", "specificity"]
+        fields = scores.model_dump()
+        score_collection = [fields[r]["score"] for r in score_rubrics]
+        score_reason_collection = [fields[r]["reason"] for r in score_rubrics]
         return score_collection, score_reason_collection
 
 

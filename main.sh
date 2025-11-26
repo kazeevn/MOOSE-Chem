@@ -131,7 +131,7 @@ run_display() {
 }
 
 run_analysis() {
-    echo "=== Step 7: Analysis (Groundtruth Hypothesis Ranking) ==="
+    echo "=== Step 7: Analysis (Ground Truth Hypothesis Ranking) ==="
     python -u ./Analysis/groundtruth_hyp_ranking.py --model_name ${model_name_eval} \
             --api_type ${api_type} --api_key ${api_key} --base_url ${base_url} \
             --evaluate_result_dir ${checkpoint_root_dir}/evaluation_${model_name_eval}_corpus_150_survey_1_gdthInsp_1_intraEA_1_interEA_1_bkgid_ \

@@ -137,46 +137,6 @@ def instruction_prompts(module_name, more_info=None):
                 Each aspect should be scored from 1 to 5 based on the strict guidelines below. High scores (4 or 5) should only be given to truly outstanding hypotheses. Most ordinary or vague hypotheses should receive scores of 1 to 3. Be strict, objective, and critical. Your evaluation should focus only on the content and methodology of the hypothesis, not on writing style.
                 '''
         }]
-    elif module_name == "four_aspects_self_numerical_evaluation":
-        prompts = [f'''
-                    You are a harsh and diligent reviewer in {DISCIPLINE}. You are well-known for carefully identifying flaws and usually giving low scores unless a hypothesis is truly exceptional.
-                    Given a not-yet-peer-reviewed research hypothesis in {DISCIPLINE}, evaluate it from four aspects: Validness, Novelty, Significance, and Specificity.
-                    Each aspect should be scored from 1 to 5 based on the strict guidelines below. High scores (4 or 5) should only be given to truly outstanding hypotheses. Most ordinary or vague hypotheses should receive scores of 1 to 3. Be strict, objective, and critical. Your evaluation should focus only on the content and methodology of the hypothesis, not on writing style.
-
-                    Scoring Guidelines
-                    Validness (Objective Soundness)
-                    Does the hypothesis make sense based on your knowledge and reasoning ability?
-                    5 — Exceptional soundness. Fully coherent and highly reasonable. No weak assumptions.
-                    4 — Strong validity. Mostly reasonable with some uncertain assumptions.
-                    3 — Barely valid. Possible but weak, speculative, or fragile reasoning.
-                    2 — Low validity. Doubtful or inconsistent.
-                    1 — Invalid. Contradicts known science or impossible mechanisms.
-
-                    Novelty (Originality)
-                    Is the core idea new?
-                    5 — Groundbreaking novelty. Fundamentally new principle or mechanism.
-                    4 — Highly novel. Significant deviation from existing knowledge.
-                    3 — Moderate novelty. New combination but within existing frameworks.
-                    2 — Low novelty. Minor variations of existing work.
-                    1 — No novelty. Standard or trivial idea.
-
-                    Significance (Research Impact)
-                    If true, how much impact does it have?
-                    5 — Field-changing. Reshapes core theories or applications.
-                    4 — High impact. Advances state-of-the-art or solves key problem.
-                    3 — Meaningful. Improves a subfield or opens new directions.
-                    2 — Limited. Incremental improvement or niche value.
-                    1 — Minimal. Very narrow or little added value.
-
-                    Specificity (Clarity & Methodological Detail)
-                    Is the hypothesis detailed and actionable for scientists?
-                    5 — Fully detailed. Every key mechanism and parameter is specified.
-                    4 — Detailed. Most steps are clear with minor clarification needed.
-                    3 — Moderately clear. General methodology but vague key steps.
-                    2 — Low specificity. High-level idea only; hard to use directly.
-                    1 — Vague. No actionable detail.
-                    The hypothesis is:\n
-                   ''', "\nPlease give a response to the initial question on scoring the hypothesis from four aspects. Remember that you are a diligent and harsh reviewer. (response format: 'Concise reason for validness score: \nValidness score: \nConcise reason for novelty score: \nNovelty score: \nConcise reason for significance score: \nSignificance score: \nConcise reason for specificity score: \nSpecificity score: \n')."]
     elif module_name == "hypothesis_generation_with_feedback_only_core_inspiration":
         prompts = ["You are helping with the scientific hypotheses generation process. We in general split the period of research hypothesis proposal into three steps. Firstly it's about finding a good and specific background research question, and an introduction of the previous methods under the same topic; Secondly its about finding inspirations (mostly from literatures), which combined with the background research question, can lead to a impactful research hypothesis; Finally it's hypothesis generation based on the background research question and found inspirations. Take backpropagation as an example, the research question is how to use data to automatically improve the parameters of a multi-layer logistic regression with data, the inspiration is the chain rule in mathematics, and the research hypothesis is the backpropagation itself. \nNow we have identified a good research question and a core inspiration in a literature for this research question. With them, we have already generated a preliminary coarse-grained research hypothesis. We have also obtain feedbacks on the hypothesis from domain experts in terms of novalty, validity, significance, and clarity. With these feedbacks, please try your best to refine the hypothesis. Please note that during refinement, do not improve a hypothesis's significance by adding expectation of the performance gain of the method or adding description of its potential impact, but you should work on improving the method itself (e.g., by adding or changing details of the methodology). Similar advice for other evaluation aspects (novelty, validness, and clarity), too. \nThe background research question is: ", "\n\nThe introduction of the previous methods is:", "\n\nThe core inspiration is: ", "\n\nThe preliminary hypothesis is: ", "\n\nThe feedbacks from domain experts are: ", f"\n\nNow you have seen the background research question, the core inspiration, the preliminary hypothesis, and the feedbacks from domain experts. Please try to refine the hypothesis based on the feedbacks. {HYPOTHESIS_GENERATION_CUSTOM_GUIDE}(response format: 'Reasoning Process:\nRefined Hypothesis: \n')"]
     elif module_name == "hypothesis_generation_with_feedback_without_inspiration":
